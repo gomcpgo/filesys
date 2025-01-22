@@ -28,7 +28,37 @@ func (h *FileSystemHandler) ListTools(ctx context.Context) (*protocol.ListToolsR
 			}`),
 		},
 		{
-			Name: "read_multiple_files",
+			Name: "update_file_section",
+			Description: "Update a specific section of a file by replacing content between given line numbers. " +
+				"Ideal for modifying specific functions or blocks of code while preserving the rest of the file unchanged. " +
+				"Use this instead of complete file rewrites when only a small section needs to be modified.",
+			InputSchema: json.RawMessage(`{
+				"type": "object",
+				"properties": {
+					"path": {
+						"type": "string",
+						"description": "Path to the file to update"
+					},
+					"startLine": {
+						"type": "integer",
+						"description": "Starting line number (1-based)",
+						"minimum": 1
+					},
+					"endLine": {
+						"type": "integer",
+						"description": "Ending line number (1-based, inclusive)",
+						"minimum": 1
+					},
+					"newContent": {
+						"type": "string",
+						"description": "New content to insert between start and end lines"
+					}
+				},
+				"required": ["path", "startLine", "endLine", "newContent"]
+			}`),
+		},
+		{
+			Name:        "read_multiple_files",
 			Description: "Read the contents of multiple files simultaneously.",
 			InputSchema: json.RawMessage(`{
 				"type": "object",
@@ -45,7 +75,7 @@ func (h *FileSystemHandler) ListTools(ctx context.Context) (*protocol.ListToolsR
 			}`),
 		},
 		{
-			Name: "write_file",
+			Name:        "write_file",
 			Description: "Create a new file or completely overwrite an existing file with new content.",
 			InputSchema: json.RawMessage(`{
 				"type": "object",
@@ -63,7 +93,7 @@ func (h *FileSystemHandler) ListTools(ctx context.Context) (*protocol.ListToolsR
 			}`),
 		},
 		{
-			Name: "create_directory",
+			Name:        "create_directory",
 			Description: "Create a new directory or ensure a directory exists.",
 			InputSchema: json.RawMessage(`{
 				"type": "object",
@@ -77,7 +107,7 @@ func (h *FileSystemHandler) ListTools(ctx context.Context) (*protocol.ListToolsR
 			}`),
 		},
 		{
-			Name: "list_directory",
+			Name:        "list_directory",
 			Description: "Get a detailed listing of all files and directories in a specified path.",
 			InputSchema: json.RawMessage(`{
 				"type": "object",
@@ -91,7 +121,7 @@ func (h *FileSystemHandler) ListTools(ctx context.Context) (*protocol.ListToolsR
 			}`),
 		},
 		{
-			Name: "move_file",
+			Name:        "move_file",
 			Description: "Move or rename files and directories.",
 			InputSchema: json.RawMessage(`{
 				"type": "object",
@@ -109,7 +139,7 @@ func (h *FileSystemHandler) ListTools(ctx context.Context) (*protocol.ListToolsR
 			}`),
 		},
 		{
-			Name: "search_files",
+			Name:        "search_files",
 			Description: "Recursively search for files and directories matching a pattern.",
 			InputSchema: json.RawMessage(`{
 				"type": "object",
@@ -127,7 +157,7 @@ func (h *FileSystemHandler) ListTools(ctx context.Context) (*protocol.ListToolsR
 			}`),
 		},
 		{
-			Name: "get_file_info",
+			Name:        "get_file_info",
 			Description: "Retrieve detailed metadata about a file or directory.",
 			InputSchema: json.RawMessage(`{
 				"type": "object",
@@ -141,7 +171,7 @@ func (h *FileSystemHandler) ListTools(ctx context.Context) (*protocol.ListToolsR
 			}`),
 		},
 		{
-			Name: "list_allowed_directories",
+			Name:        "list_allowed_directories",
 			Description: "Returns the list of directories that this server is allowed to access.",
 			InputSchema: json.RawMessage(`{
 				"type": "object",

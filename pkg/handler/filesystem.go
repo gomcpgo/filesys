@@ -8,7 +8,7 @@ import (
 )
 
 // FileSystemHandler implements the MCP handler interfaces for filesystem operations
-type FileSystemHandler struct {}
+type FileSystemHandler struct{}
 
 // NewFileSystemHandler creates a new filesystem handler
 func NewFileSystemHandler() *FileSystemHandler {
@@ -36,6 +36,8 @@ func (h *FileSystemHandler) CallTool(ctx context.Context, req *protocol.CallTool
 		return h.handleGetFileInfo(req.Arguments)
 	case "list_allowed_directories":
 		return h.handleListAllowedDirectories()
+	case "update_file_section":
+		return h.handleUpdateFileSection(req.Arguments)
 	default:
 		return nil, fmt.Errorf("unknown tool: %s", req.Name)
 	}
