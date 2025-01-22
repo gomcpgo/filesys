@@ -2,7 +2,6 @@ package main
 
 import (
 	"log"
-	"os"
 
 	fshandler "github.com/gomcpgo/filesys/pkg/handler"
 	"github.com/gomcpgo/mcp/pkg/handler"
@@ -10,13 +9,8 @@ import (
 )
 
 func main() {
-	// Get allowed directories from command-line arguments
-	if len(os.Args) < 2 {
-		log.Fatal("Usage: filesys <dir1> [dir2] [dir3] ...")
-	}
-
-	// Create the filesystem handler with allowed directories
-	fsHandler := fshandler.NewFileSystemHandler(os.Args[1:])
+	// Create the filesystem handler
+	fsHandler := fshandler.NewFileSystemHandler()
 
 	// Create handler registry
 	registry := handler.NewHandlerRegistry()
@@ -29,7 +23,7 @@ func main() {
 		Registry: registry,
 	})
 
-	log.Printf("Starting filesystem server with allowed directories: %v", os.Args[1:])
+	log.Printf("Starting filesystem server")
 	if err := srv.Run(); err != nil {
 		log.Fatalf("Server error: %v", err)
 	}
