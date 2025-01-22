@@ -68,11 +68,16 @@ func (h *FileSystemHandler) handleListDirectory(args map[string]interface{}) (*p
 }
 
 func (h *FileSystemHandler) handleListAllowedDirectories() (*protocol.CallToolResponse, error) {
+	dirs, err := getAllowedDirs()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get allowed directories: %w", err)
+	}
+
 	return &protocol.CallToolResponse{
 		Content: []protocol.ToolContent{
 			{
 				Type: "text",
-				Text: fmt.Sprintf("Allowed directories:\n%s", strings.Join(h.allowedDirs, "\n")),
+				Text: fmt.Sprintf("Allowed directories:\n%s", strings.Join(dirs, "\n")),
 			},
 		},
 	}, nil
