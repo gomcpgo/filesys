@@ -7,7 +7,6 @@ import (
 	"github.com/gomcpgo/mcp/pkg/protocol"
 )
 
-// ListTools returns the available filesystem tools
 func (h *FileSystemHandler) ListTools(ctx context.Context) (*protocol.ListToolsResponse, error) {
 	tools := []protocol.Tool{
 		{
@@ -25,36 +24,6 @@ func (h *FileSystemHandler) ListTools(ctx context.Context) (*protocol.ListToolsR
 					}
 				},
 				"required": ["path"]
-			}`),
-		},
-		{
-			Name: "update_file_section",
-			Description: "Update a specific section of a file by replacing content between given line numbers. " +
-				"Ideal for modifying specific functions or blocks of code while preserving the rest of the file unchanged. " +
-				"Use this instead of complete file rewrites when only a small section needs to be modified.",
-			InputSchema: json.RawMessage(`{
-				"type": "object",
-				"properties": {
-					"path": {
-						"type": "string",
-						"description": "Path to the file to update"
-					},
-					"startLine": {
-						"type": "integer",
-						"description": "Starting line number (1-based)",
-						"minimum": 1
-					},
-					"endLine": {
-						"type": "integer",
-						"description": "Ending line number (1-based, inclusive)",
-						"minimum": 1
-					},
-					"newContent": {
-						"type": "string",
-						"description": "New content to insert between start and end lines"
-					}
-				},
-				"required": ["path", "startLine", "endLine", "newContent"]
 			}`),
 		},
 		{
@@ -179,7 +148,123 @@ func (h *FileSystemHandler) ListTools(ctx context.Context) (*protocol.ListToolsR
 				"required": []
 			}`),
 		},
+		{
+			Name:        "append_to_file",
+			Description: "Add content to the end of a file. If the file doesn't exist, it will be created.",
+			InputSchema: json.RawMessage(`{
+				"type": "object",
+				"properties": {
+					"path": {
+						"type": "string",
+						"description": "Path to the file"
+					},
+					"content": {
+						"type": "string",
+						"description": "Content to append to the file"
+					}
+				},
+				"required": ["path", "content"]
+			}`),
+		},
+		{
+			Name:        "prepend_to_file",
+			Description: "Add content to the beginning of a file. If the file doesn't exist, it will be created.",
+			InputSchema: json.RawMessage(`{
+				"type": "object",
+				"properties": {
+					"path": {
+						"type": "string",
+						"description": "Path to the file"
+					},
+					"content": {
+						"type": "string",
+						"description": "Content to prepend to the file"
+					}
+				},
+				"required": ["path", "content"]
+			}`),
+		},
+		{
+			Name:        "replace_in_file",
+			Description: "Replace occurrences of a string in a file with new content.",
+			InputSchema: json.RawMessage(`{
+				"type": "object",
+				"properties": {
+					"path": {
+						"type": "string",
+						"description": "Path to the file"
+					},
+					"search": {
+						"type": "string",
+						"description": "String to search for"
+					},
+					"replace": {
+						"type": "string",
+						"description": "String to replace with"
+					},
+					"occurrence": {
+						"type": "integer",
+						"description": "Which occurrence to replace (0 means all, default is all)",
+						"minimum": 0
+					}
+				},
+				"required": ["path", "search", "replace"]
+			}`),
+		},
+		{
+			Name:        "insert_after_string",
+			Description: "Insert content after a specific occurrence of a string in a file.",
+			InputSchema: json.RawMessage(`{
+				"type": "object",
+				"properties": {
+					"path": {
+						"type": "string",
+						"description": "Path to the file"
+					},
+					"search": {
+						"type": "string",
+						"description": "String to search for"
+					},
+					"content": {
+						"type": "string",
+						"description": "Content to insert"
+					},
+					"occurrence": {
+						"type": "integer",
+						"description": "Which occurrence to insert after (default is 1, the first occurrence)",
+						"minimum": 1
+					}
+				},
+				"required": ["path", "search", "content"]
+			}`),
+		},
+		{
+			Name:        "insert_before_string",
+			Description: "Insert content before a specific occurrence of a string in a file.",
+			InputSchema: json.RawMessage(`{
+				"type": "object",
+				"properties": {
+					"path": {
+						"type": "string",
+						"description": "Path to the file"
+					},
+					"search": {
+						"type": "string",
+						"description": "String to search for"
+					},
+					"content": {
+						"type": "string",
+						"description": "Content to insert"
+					},
+					"occurrence": {
+						"type": "integer",
+						"description": "Which occurrence to insert before (default is 1, the first occurrence)",
+						"minimum": 1
+					}
+				},
+				"required": ["path", "search", "content"]
+			}`),
+		},
 	}
-
 	return &protocol.ListToolsResponse{Tools: tools}, nil
 }

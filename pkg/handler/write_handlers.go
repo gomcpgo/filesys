@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strings"
 
 	"github.com/gomcpgo/mcp/pkg/protocol"
 )
@@ -74,84 +73,6 @@ func (h *FileSystemHandler) handleMoveFile(args map[string]interface{}) (*protoc
 			{
 				Type: "text",
 				Text: fmt.Sprintf("Successfully moved %s to %s", source, destination),
-			},
-		},
-	}, nil
-}
-
-func (h *FileSystemHandler) handleUpdateFileSection(args map[string]interface{}) (*protocol.CallToolResponse, error) {
-	path, ok := args["path"].(string)
-	if !ok {
-		log.Printf("ERROR: update_file_section - invalid path type: %T", args["path"])
-		return nil, fmt.Errorf("path must be a string")
-	}
-	startLine, ok := args["startLine"].(float64)
-	if !ok {
-		log.Printf("ERROR: update_file_section - invalid startLine type: %T", args["startLine"])
-		return nil, fmt.Errorf("startLine must be a number")
-	}
-	endLine, ok := args["endLine"].(float64)
-	if !ok {
-		log.Printf("ERROR: update_file_section - invalid endLine type: %T", args["endLine"])
-		return nil, fmt.Errorf("endLine must be a number")
-	}
-	newContent, ok := args["newContent"].(string)
-	if !ok {
-		log.Printf("ERROR: update_file_section - invalid newContent type: %T", args["newContent"])
-		return nil, fmt.Errorf("newContent must be a string")
-	}
-
-	start := int(startLine)
-	end := int(endLine)
-	if start < 1 {
-		log.Printf("ERROR: update_file_section - invalid startLine: %d (must be >= 1)", start)
-		return nil, fmt.Errorf("startLine must be >= 1")
-	}
-	if end < start {
-		log.Printf("ERROR: update_file_section - invalid endLine: %d (must be >= startLine %d)", end, start)
-		return nil, fmt.Errorf("endLine must be >= startLine")
-	}
-
-	log.Printf("update_file_section - attempting to update lines %d-%d in %s", start, end, path)
-	if !h.isPathAllowed(path) {
-		log.Printf("ERROR: update_file_section - access denied to path: %s", path)
-		return nil, fmt.Errorf("access to path is not allowed: %s", path)
-	}
-
-	content, err := os.ReadFile(path)
-	if err != nil {
-		log.Printf("ERROR: update_file_section - failed to read file %s: %v", path, err)
-		return nil, fmt.Errorf("failed to read file: %w", err)
-	}
-
-	lines := strings.Split(string(content), "\n")
-	if start > len(lines) {
-		log.Printf("ERROR: update_file_section - startLine %d is beyond end of file (%d lines)", start, len(lines))
-		return nil, fmt.Errorf("startLine %d is beyond end of file (%d lines)", start, len(lines))
-	}
-	if end > len(lines) {
-		log.Printf("ERROR: update_file_section - endLine %d is beyond end of file (%d lines)", end, len(lines))
-		return nil, fmt.Errorf("endLine %d is beyond end of file (%d lines)", end, len(lines))
-	}
-
-	newLines := make([]string, 0, len(lines)-(end-start+1)+1)
-	newLines = append(newLines, lines[:start-1]...)
-	newLines = append(newLines, strings.Split(newContent, "\n")...)
-	newLines = append(newLines, lines[end:]...)
-
-	log.Printf("update_file_section - writing updated content to %s", path)
-	err = os.WriteFile(path, []byte(strings.Join(newLines, "\n")), 0644)
-	if err != nil {
-		log.Printf("ERROR: update_file_section - failed to write updated content to %s: %v", path, err)
-		return nil, fmt.Errorf("failed to write file: %w", err)
-	}
-
-	log.Printf("update_file_section - successfully updated lines %d-%d in %s", start, end, path)
-	return &protocol.CallToolResponse{
-		Content: []protocol.ToolContent{
-			{
-				Type: "text",
-				Text: fmt.Sprintf("Successfully updated lines %d-%d in %s", start, end, path),
 			},
 		},
 	}, nil

@@ -36,8 +36,17 @@ func (h *FileSystemHandler) CallTool(ctx context.Context, req *protocol.CallTool
 		return h.handleGetFileInfo(req.Arguments)
 	case "list_allowed_directories":
 		return h.handleListAllowedDirectories()
-	case "update_file_section":
-		return h.handleUpdateFileSection(req.Arguments)
+	// New tools
+	case "append_to_file":
+		return h.handleAppendToFile(req.Arguments)
+	case "prepend_to_file":
+		return h.handlePrependToFile(req.Arguments)
+	case "replace_in_file":
+		return h.handleReplaceInFile(req.Arguments)
+	case "insert_after_string":
+		return h.handleInsertAfterString(req.Arguments)
+	case "insert_before_string":
+		return h.handleInsertBeforeString(req.Arguments)
 	default:
 		return nil, fmt.Errorf("unknown tool: %s", req.Name)
 	}
