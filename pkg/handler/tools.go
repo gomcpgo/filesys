@@ -109,7 +109,8 @@ func (h *FileSystemHandler) ListTools(ctx context.Context) (*protocol.ListToolsR
 		},
 		{
 			Name:        "search_files",
-			Description: "Recursively search for files and directories matching a pattern.",
+			Description: "Recursively search for files and directories matching a pattern. " +
+				"The search looks for the pattern anywhere in the file or directory names.",
 			InputSchema: json.RawMessage(`{
 				"type": "object",
 				"properties": {
@@ -120,6 +121,18 @@ func (h *FileSystemHandler) ListTools(ctx context.Context) (*protocol.ListToolsR
 					"pattern": {
 						"type": "string",
 						"description": "Search pattern to match"
+					},
+					"case_sensitive": {
+						"type": "boolean",
+						"description": "Whether to perform a case-sensitive search (default: false)"
+					},
+					"max_depth": {
+						"type": "integer",
+						"description": "Maximum depth for recursive search (-1 = unlimited, 0 = current directory only, default: -1)"
+					},
+					"match_path": {
+						"type": "boolean",
+						"description": "Whether to search in full paths instead of just filenames (default: false)"
 					}
 				},
 				"required": ["path", "pattern"]
