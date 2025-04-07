@@ -30,8 +30,7 @@ func (h *FileSystemHandler) CallTool(ctx context.Context, req *protocol.CallTool
 		return h.handleListDirectory(req.Arguments)
 	case "move_file":
 		return h.handleMoveFile(req.Arguments)
-	case "search_files":
-		return h.handleSearchFiles(req.Arguments)
+	// Removed old search_files handler in favor of search_in_files
 	case "get_file_info":
 		return h.handleGetFileInfo(req.Arguments)
 	case "list_allowed_directories":
