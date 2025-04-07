@@ -10,6 +10,46 @@ import (
 func (h *FileSystemHandler) ListTools(ctx context.Context) (*protocol.ListToolsResponse, error) {
 	tools := []protocol.Tool{
 		{
+			Name:        "search_in_files",
+			Description: "Search for text patterns within files using regex. Returns matches with file paths and line numbers.",
+			InputSchema: json.RawMessage(`{
+				"type": "object",
+				"properties": {
+					"path": {
+						"type": "string",
+						"description": "Directory to search in"
+					},
+					"pattern": {
+						"type": "string",
+						"description": "Regex pattern to search for"
+					},
+					"file_extensions": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						},
+						"description": "File extensions to include (e.g., [\".txt\", \".go\"]). If empty, searches common text file types."
+					},
+					"max_results": {
+						"type": "integer",
+						"description": "Maximum number of results to return (default 100)",
+						"default": 100
+					},
+					"max_file_searches": {
+						"type": "integer",
+						"description": "Maximum number of files to search (default 100)",
+						"default": 100
+					},
+					"case_sensitive": {
+						"type": "boolean",
+						"description": "Whether the search is case sensitive (default true)",
+						"default": true
+					}
+				},
+				"required": ["path", "pattern"]
+			}`),
+		},
+		{
 			Name: "read_file",
 			Description: "Read the complete contents of a file from the file system. " +
 				"Handles various text encodings and provides detailed error messages " +
