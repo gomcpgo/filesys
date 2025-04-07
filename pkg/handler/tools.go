@@ -126,10 +126,7 @@ func (h *FileSystemHandler) ListTools(ctx context.Context) (*protocol.ListToolsR
 						"type": "boolean",
 						"description": "Whether to perform a case-sensitive search (default: false)"
 					},
-					"max_depth": {
-						"type": "integer",
-						"description": "Maximum depth for recursive search (-1 = unlimited, 0 = current directory only, default: -1)"
-					},
+
 					"match_path": {
 						"type": "boolean",
 						"description": "Whether to search in full paths instead of just filenames (default: false)"

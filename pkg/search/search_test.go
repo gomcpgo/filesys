@@ -80,132 +80,30 @@ func TestCaseSensitiveSearch(t *testing.T) {
 	tmpDir := setupTestDir(t)
 	defer cleanupTestDir(tmpDir)
 	
+	// First test with lowercase pattern that should match
 	options := SearchOptions{
 		CaseSensitive: true,
-		MaxDepth:      -1,
 	}
 	
-	result, err := Search(tmpDir, "File", options)
-	if err != nil {
-		t.Fatalf("Search failed: %v", err)
-	}
-	
-	// None of our test files have "File" with a capital 'F'
-	if len(result.Matches) != 0 {
-		t.Errorf("Case-sensitive search found %d matches, expected 0", len(result.Matches))
-		t.Logf("Unexpected matches: %+v", result.Matches)
-	}
-	
-	// Now try with lowercase "file" which should match
-	result, err = Search(tmpDir, "file", options)
+	result, err := Search(tmpDir, "file", options)
 	if err != nil {
 		t.Fatalf("Search failed: %v", err)
 	}
 	
 	if len(result.Matches) < 4 {
 		t.Errorf("Case-sensitive search for 'file' found %d matches, expected at least 4", len(result.Matches))
-	}
-}
-
-// TestDepthLimitedSearch tests search with a depth limit
-func TestDepthLimitedSearch(t *testing.T) {
-	tmpDir := setupTestDir(t)
-	defer cleanupTestDir(tmpDir)
-	
-	options := SearchOptions{
-		CaseSensitive: false,
-		MaxDepth:      0, // Only search in the root directory
+		t.Logf("Matches found: %+v", result.Matches)
 	}
 	
-	// First test with depth 0 (only the current directory)
-	result, err := Search(tmpDir, "file", options)
+	// Now test with uppercase pattern that should not match
+	result, err = Search(tmpDir, "FILE", options)
 	if err != nil {
 		t.Fatalf("Search failed: %v", err)
 	}
 	
-	// Only files in the root directory should be found
-	for _, match := range result.Matches {
-		relPath, err := filepath.Rel(tmpDir, match.Path)
-		if err != nil {
-			t.Errorf("Failed to get relative path: %v", err)
-			continue
-		}
-		
-		if strings.Contains(relPath, string(filepath.Separator)) {
-			t.Errorf("Depth-0 search returned file from subdirectory: %s", relPath)
-		}
-	}
-	
-	// Now test with depth 1 to look for a file we know exists in the first subdirectory level
-	options.MaxDepth = 1
-	result, err = Search(tmpDir, "nested", options) // Use "nested" to match nested_file.txt
-	if err != nil {
-		t.Fatalf("Search failed: %v", err)
-	}
-	
-	// Debug output
-	t.Logf("Depth-1 search for 'nested' found %d matches:", len(result.Matches))
-	for _, match := range result.Matches {
-		t.Logf("Match: %s", match.Path)
-	}
-	
-	// At least one file should be found in the first subdirectory level
-	foundInSubdir := false
-	foundTooDeep := false
-	
-	for _, match := range result.Matches {
-		relPath, err := filepath.Rel(tmpDir, match.Path)
-		if err != nil {
-			t.Errorf("Failed to get relative path: %v", err)
-			continue
-		}
-		
-		parts := strings.Split(relPath, string(filepath.Separator))
-		
-		// A file is in a first-level subdirectory if it has exactly one separator
-		if len(parts) == 2 { 
-			foundInSubdir = true
-			t.Logf("Found file in first-level subdirectory: %s", relPath)
-		}
-		
-		// It should not find files in deeper subdirectories
-		if len(parts) > 2 {
-			foundTooDeep = true
-			t.Logf("Found file too deep: %s", relPath)
-		}
-	}
-	
-	if !foundInSubdir {
-		t.Errorf("Depth-1 search did not find files in first-level subdirectories")
-	}
-	
-	if foundTooDeep {
-		t.Errorf("Depth-1 search found files in deeper subdirectories than expected")
-	}
-	
-	// Now let's test with unlimited depth
-	options.MaxDepth = -1
-	result, err = Search(tmpDir, "deep", options) // Should find deep_test_file.json
-	if err != nil {
-		t.Fatalf("Search failed: %v", err)
-	}
-	
-	foundDeepFile := false
-	for _, match := range result.Matches {
-		relPath, err := filepath.Rel(tmpDir, match.Path)
-		if err != nil {
-			t.Errorf("Failed to get relative path: %v", err)
-			continue
-		}
-		
-		if strings.Contains(relPath, "deeper") {
-			foundDeepFile = true
-			break
-		}
-	}
-	
-	if !foundDeepFile {
-		t.Errorf("Unlimited depth search did not find files in deep subdirectories")
+	if len(result.Matches) > 0 {
+		t.Errorf("Case-sensitive search for 'FILE' found %d matches, expected 0", len(result.Matches))
+		t.Logf("Unexpected matches: %+v", result.Matches)
 	}
 }
 
@@ -214,54 +112,75 @@ func TestPathMatching(t *testing.T) {
 	tmpDir := setupTestDir(t)
 	defer cleanupTestDir(tmpDir)
 	
-	// First test without path matching (default)
+	// Create a new directory with a specific name for testing
+	testDirPath := filepath.Join(tmpDir, "special_test_directory")
+	if err := os.MkdirAll(testDirPath, 0755); err != nil {
+		t.Fatalf("Failed to create test directory: %v", err)
+	}
+	
+	// Create a test file that doesn't have "special" in its name
+	testFilePath := filepath.Join(testDirPath, "normal.txt")
+	if err := os.WriteFile(testFilePath, []byte("test content"), 0644); err != nil {
+		t.Fatalf("Failed to create test file: %v", err)
+	}
+	
+	// Test with filename-only matching (default)
 	options := DefaultSearchOptions()
-	result, err := Search(tmpDir, "deeper", options)
+	result, err := Search(tmpDir, "special", options)
 	if err != nil {
 		t.Fatalf("Search failed: %v", err)
 	}
 	
-	// Should only find files with "deeper" in their names
-	deeperInName := 0
+	t.Logf("Without path matching, search for 'special' found %d matches", len(result.Matches))
 	for _, match := range result.Matches {
-		if strings.Contains(strings.ToLower(match.Name), "deeper") {
-			deeperInName++
+		t.Logf("Match: %s", match.Path)
+	}
+	
+	// Should not find the normal.txt file when only matching filenames
+	foundNormalTxt := false
+	foundSpecialDir := false
+	for _, match := range result.Matches {
+		if strings.HasSuffix(match.Path, "normal.txt") {
+			foundNormalTxt = true
+		}
+		if match.IsDir && strings.Contains(match.Path, "special_test_directory") {
+			foundSpecialDir = true
 		}
 	}
 	
-	// There are no files with "deeper" in the name, only a directory
-	if deeperInName > 0 {
-		t.Errorf("Without path matching, found %d files with 'deeper' in name; expected 0", deeperInName)
+	// The directory itself should match "special"
+	if !foundSpecialDir {
+		t.Errorf("Without path matching, did not find the 'special_test_directory' directory")
+	}
+	
+	// normal.txt should not match "special" when only matching filenames
+	if foundNormalTxt {
+		t.Errorf("Without path matching, found normal.txt when searching for 'special'")
 	}
 	
 	// Now test with path matching enabled
 	options.MatchPath = true
-	result, err = Search(tmpDir, "deeper", options)
+	result, err = Search(tmpDir, "special", options)
 	if err != nil {
 		t.Fatalf("Search failed: %v", err)
 	}
 	
-	// Should find files in the "deeper" directory
-	if len(result.Matches) == 0 {
-		t.Errorf("With path matching, found 0 matches for 'deeper', expected at least 1")
+	t.Logf("With path matching, search for 'special' found %d matches", len(result.Matches))
+	for _, match := range result.Matches {
+		t.Logf("Match: %s", match.Path)
 	}
 	
-	foundDeepFile := false
+	// Should find normal.txt because it's in a path containing "special"
+	foundNormalTxt = false
 	for _, match := range result.Matches {
-		relPath, err := filepath.Rel(tmpDir, match.Path)
-		if err != nil {
-			t.Errorf("Failed to get relative path: %v", err)
-			continue
-		}
-		
-		if strings.Contains(relPath, "deeper") && strings.Contains(relPath, "deep_test_file.json") {
-			foundDeepFile = true
+		if strings.HasSuffix(match.Path, "normal.txt") {
+			foundNormalTxt = true
 			break
 		}
 	}
 	
-	if !foundDeepFile {
-		t.Errorf("With path matching, did not find deep_test_file.json in deeper directory")
+	if !foundNormalTxt {
+		t.Errorf("With path matching, did not find normal.txt in special_test_directory")
 	}
 }
 

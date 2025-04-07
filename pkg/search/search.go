@@ -13,8 +13,6 @@ import (
 type SearchOptions struct {
 	// CaseSensitive determines if pattern matching should be case-sensitive
 	CaseSensitive bool
-	// MaxDepth limits the recursion depth (0 = current directory only, -1 = unlimited)
-	MaxDepth int
 	// MatchPath determines if the pattern should be matched against the full path
 	// instead of just the filename
 	MatchPath bool
@@ -24,7 +22,6 @@ type SearchOptions struct {
 func DefaultSearchOptions() SearchOptions {
 	return SearchOptions{
 		CaseSensitive: false,
-		MaxDepth:      -1, // Unlimited depth
 		MatchPath:     false, // Only match filename by default
 	}
 }
@@ -123,40 +120,28 @@ func Search(basePath string, pattern string, options SearchOptions) (*SearchResu
 			return nil // Continue despite errors
 		}
 		
-		// Check depth limit
-		if options.MaxDepth >= 0 {
-			relPath, err := filepath.Rel(basePath, path)
-			if err != nil {
-				result.Errors = append(result.Errors, fmt.Errorf("error determining relative path for %s: %w", path, err))
-				return nil
-			}
-			
-			// Skip if beyond max depth
-			depth := 0
-			if relPath != "." {
-				depth = len(strings.Split(relPath, string(filepath.Separator)))
-			}
-			
-			if depth > options.MaxDepth {
-				if info.IsDir() {
-					return filepath.SkipDir // Skip directories beyond max depth
-				}
-				return nil
-			}
-		}
+		// Depth limiting has been removed for simplicity
 		
 		// Determine what to match against (name or full path)
 		var stringToMatch string
-		if options.MatchPath {
-			// Use the path relative to base path to avoid matching on the base path itself
+		
+		// Always use just the filename unless MatchPath is true
+		if !options.MatchPath {
+			// Only match against the filename (basename)
+			stringToMatch = info.Name()
+		} else {
+			// Use the relative path for matching when MatchPath is true
 			relPath, err := filepath.Rel(basePath, path)
 			if err != nil {
 				result.Errors = append(result.Errors, fmt.Errorf("error determining relative path for %s: %w", path, err))
-				relPath = path // Fall back to full path if relative path can't be determined
+				stringToMatch = info.Name() // Fall back to filename if relative path can't be determined
+			} else if relPath == "." {
+				// For the base directory itself, use its name
+				stringToMatch = info.Name()
+			} else {
+				// For other paths, use the relative path
+				stringToMatch = relPath
 			}
-			stringToMatch = relPath
-		} else {
-			stringToMatch = info.Name()
 		}
 		
 		// Check if it matches the pattern

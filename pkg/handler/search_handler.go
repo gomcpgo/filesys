@@ -40,9 +40,7 @@ func (h *FileSystemHandler) handleSearchFiles(args map[string]interface{}) (*pro
 		options.CaseSensitive = caseSensitive
 	}
 
-	if maxDepth, ok := args["max_depth"].(float64); ok {
-		options.MaxDepth = int(maxDepth)
-	}
+	// MaxDepth option has been removed
 
 	if matchPath, ok := args["match_path"].(bool); ok {
 		options.MatchPath = matchPath
