@@ -74,7 +74,7 @@ func Search(opts SearchOptions) (SearchResult, error) {
 
 	// Initialize result
 	result := SearchResult{
-		Matches: make([]SearchMatch, 0),
+		Matches: make([]SearchMatch, 0, opts.MaxResults), // Pre-allocate capacity
 	}
 
 	// Create a map of allowed extensions for faster lookup
@@ -83,8 +83,16 @@ func Search(opts SearchOptions) (SearchResult, error) {
 		allowedExts[strings.ToLower(ext)] = true
 	}
 
+	// Used to track if we should stop the walk early
+	shouldStop := false
+
 	// Walk through directory
 	err = filepath.Walk(opts.RootDir, func(path string, info os.FileInfo, err error) error {
+		// Skip if we've decided to stop
+		if shouldStop {
+			return filepath.SkipDir
+		}
+
 		// Skip if there was an error accessing this path
 		if err != nil {
 			return nil
@@ -97,6 +105,7 @@ func Search(opts SearchOptions) (SearchResult, error) {
 
 		// Stop if we've reached the maximum number of files to search
 		if result.FilesSearched >= opts.MaxFileSearches {
+			shouldStop = true
 			return filepath.SkipDir
 		}
 
@@ -108,7 +117,7 @@ func Search(opts SearchOptions) (SearchResult, error) {
 			}
 		}
 
-		// Skip if the file is too large (greater than 10MB) or likely binary
+		// Skip if the file is too large or likely binary
 		if !isTextFile(path, info) {
 			return nil
 		}
@@ -126,8 +135,11 @@ func Search(opts SearchOptions) (SearchResult, error) {
 		// Add matches to result, up to the maximum
 		if len(fileMatches) > 0 {
 			result.FilesMatched++
+			
+			// Add each match, but respect the maximum
 			for _, match := range fileMatches {
 				if result.TotalMatches >= opts.MaxResults {
+					shouldStop = true
 					break
 				}
 				result.Matches = append(result.Matches, match)
@@ -135,15 +147,16 @@ func Search(opts SearchOptions) (SearchResult, error) {
 			}
 		}
 
-		// Stop if we've reached the maximum number of results
+		// Check if we've reached the maximum after processing this file
 		if result.TotalMatches >= opts.MaxResults {
+			shouldStop = true
 			return filepath.SkipDir
 		}
 
 		return nil
 	})
 
-	if err != nil {
+	if err != nil && !os.IsNotExist(err) { // Ignore "file not found" errors during walk
 		return result, fmt.Errorf("error walking directory: %w", err)
 	}
 
@@ -214,6 +227,18 @@ func isTextFile(filePath string, info os.FileInfo) bool {
 		if buffer[i] == 0 {
 			return false
 		}
+	}
+
+	// Add additional check for file extension if needed
+	ext := strings.ToLower(filepath.Ext(filePath))
+	knownBinaryExts := map[string]bool{
+		".bin": true, ".exe": true, ".dll": true, ".so": true, 
+		".dylib": true, ".zip": true, ".tar": true, ".gz": true,
+		".jpg": true, ".jpeg": true, ".png": true, ".gif": true,
+	}
+	
+	if knownBinaryExts[ext] {
+		return false
 	}
 
 	return true
