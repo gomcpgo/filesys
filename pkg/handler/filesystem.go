@@ -30,22 +30,17 @@ func (h *FileSystemHandler) CallTool(ctx context.Context, req *protocol.CallTool
 		return h.handleListDirectory(req.Arguments)
 	case "move_file":
 		return h.handleMoveFile(req.Arguments)
-	// Removed old search_files handler in favor of search_in_files
 	case "get_file_info":
 		return h.handleGetFileInfo(req.Arguments)
 	case "list_allowed_directories":
 		return h.handleListAllowedDirectories()
-	// New tools
+	// File modification tools
 	case "append_to_file":
 		return h.handleAppendToFile(req.Arguments)
 	case "prepend_to_file":
 		return h.handlePrependToFile(req.Arguments)
 	case "replace_in_file":
 		return h.handleReplaceInFile(req.Arguments)
-	case "insert_after_string":
-		return h.handleInsertAfterString(req.Arguments)
-	case "insert_before_string":
-		return h.handleInsertBeforeString(req.Arguments)
 	case "search_in_files":
 		return h.handleSearchInFiles(req.Arguments)
 	case "insert_after_regex":
