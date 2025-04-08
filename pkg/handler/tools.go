@@ -10,6 +10,46 @@ import (
 func (h *FileSystemHandler) ListTools(ctx context.Context) (*protocol.ListToolsResponse, error) {
 	tools := []protocol.Tool{
 		{
+			Name:        "search_in_files",
+			Description: "Search for text content inside files using regular expressions. This tool searches through file contents recursively in a directory and returns matches with file paths, line numbers, and the matched text lines. Only searches text files and skips binary files automatically. Use this for finding code, text strings, or patterns across multiple files.",
+			InputSchema: json.RawMessage(`{
+				"type": "object",
+				"properties": {
+					"path": {
+						"type": "string",
+						"description": "Directory path to search in. Will search recursively through all subdirectories."
+					},
+					"pattern": {
+						"type": "string",
+						"description": "Regular expression pattern to search for within file contents. Supports full regex syntax including anchors (^$), character classes ([a-z]), quantifiers (*, +, ?), and more."
+					},
+					"file_extensions": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						},
+						"description": "File extensions to include (e.g., [\".txt\", \".go\"]). Each extension should include the dot. If empty, searches common text file types including .txt, .go, .js, .html, .css, .md, .json, .yml, .yaml, .xml."
+					},
+					"max_results": {
+						"type": "integer",
+						"description": "Maximum number of matches to return (default 100)",
+						"default": 100
+					},
+					"max_file_searches": {
+						"type": "integer",
+						"description": "Maximum number of files to examine (default 100)",
+						"default": 100
+					},
+					"case_sensitive": {
+						"type": "boolean",
+						"description": "Whether the search is case sensitive. If false, case will be ignored when matching (default true)",
+						"default": true
+					}
+				},
+				"required": ["path", "pattern"]
+			}`),
+		},
+		{
 			Name: "read_file",
 			Description: "Read the complete contents of a file from the file system. " +
 				"Handles various text encodings and provides detailed error messages " +
@@ -107,24 +147,7 @@ func (h *FileSystemHandler) ListTools(ctx context.Context) (*protocol.ListToolsR
 				"required": ["source", "destination"]
 			}`),
 		},
-		{
-			Name:        "search_files",
-			Description: "Recursively search for files and directories matching a pattern.",
-			InputSchema: json.RawMessage(`{
-				"type": "object",
-				"properties": {
-					"path": {
-						"type": "string",
-						"description": "Path to search in"
-					},
-					"pattern": {
-						"type": "string",
-						"description": "Search pattern to match"
-					}
-				},
-				"required": ["path", "pattern"]
-			}`),
-		},
+
 		{
 			Name:        "get_file_info",
 			Description: "Retrieve detailed metadata about a file or directory.",
