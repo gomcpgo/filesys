@@ -315,6 +315,33 @@ func (h *FileSystemHandler) ListTools(ctx context.Context) (*protocol.ListToolsR
 				"required": ["path", "pattern", "content"]
 			}`),
 		},
+		{
+			Name:        "insert_before_regex",
+			Description: "Insert content before a specific occurrence of a regular expression pattern in a file.",
+			InputSchema: json.RawMessage(`{
+				"type": "object",
+				"properties": {
+					"path": {
+						"type": "string",
+						"description": "Path to the file"
+					},
+					"pattern": {
+						"type": "string",
+						"description": "Regular expression pattern to search for. Supports full regex syntax including anchors (^$), character classes ([a-z]), quantifiers (*, +, ?), groups, and more."
+					},
+					"content": {
+						"type": "string",
+						"description": "Content to insert"
+					},
+					"occurrence": {
+						"type": "integer",
+						"description": "Which occurrence to insert before (0 means all occurrences, 1+ for specific occurrence, default is 1)",
+						"minimum": 0
+					}
+				},
+				"required": ["path", "pattern", "content"]
+			}`),
+		},
 	}
 	return &protocol.ListToolsResponse{Tools: tools}, nil
 }
