@@ -48,6 +48,8 @@ func (h *FileSystemHandler) CallTool(ctx context.Context, req *protocol.CallTool
 		return h.handleInsertBeforeString(req.Arguments)
 	case "search_in_files":
 		return h.handleSearchInFiles(req.Arguments)
+	case "insert_after_regex":
+		return h.handleInsertAfterRegex(req.Arguments)
 	default:
 		return nil, fmt.Errorf("unknown tool: %s", req.Name)
 	}
