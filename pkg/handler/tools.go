@@ -7,9 +7,15 @@ import (
 	"github.com/gomcpgo/mcp/pkg/protocol"
 )
 
+// ListTools provides a list of all available tools in the filesystem handler
+// This function is called by the MCP server to discover available tools
+// Each tool has a name, description, and input schema defined in JSON format
+// Added via insert_before_regex tool as a demo
+
 func (h *FileSystemHandler) ListTools(ctx context.Context) (*protocol.ListToolsResponse, error) {
 	tools := []protocol.Tool{
 		{
+			// Tool Definition
 			Name:        "search_in_files",
 			Description: "Search for text content inside files using regular expressions. This tool searches through file contents recursively in a directory and returns matches with file paths, line numbers, and the matched text lines. Only searches text files and skips binary files automatically. Use this for finding code, text strings, or patterns across multiple files.",
 			InputSchema: json.RawMessage(`{
@@ -50,6 +56,7 @@ func (h *FileSystemHandler) ListTools(ctx context.Context) (*protocol.ListToolsR
 			}`),
 		},
 		{
+			// Tool Definition
 			Name: "read_file",
 			Description: "Read the complete contents of a file from the file system. " +
 				"Handles various text encodings and provides detailed error messages " +
@@ -67,6 +74,7 @@ func (h *FileSystemHandler) ListTools(ctx context.Context) (*protocol.ListToolsR
 			}`),
 		},
 		{
+			// Tool Definition
 			Name:        "read_multiple_files",
 			Description: "Read the contents of multiple files simultaneously.",
 			InputSchema: json.RawMessage(`{
@@ -84,6 +92,7 @@ func (h *FileSystemHandler) ListTools(ctx context.Context) (*protocol.ListToolsR
 			}`),
 		},
 		{
+			// Tool Definition
 			Name:        "write_file",
 			Description: "Create a new file or completely overwrite an existing file with new content.",
 			InputSchema: json.RawMessage(`{
@@ -102,6 +111,7 @@ func (h *FileSystemHandler) ListTools(ctx context.Context) (*protocol.ListToolsR
 			}`),
 		},
 		{
+			// Tool Definition
 			Name:        "create_directory",
 			Description: "Create a new directory or ensure a directory exists.",
 			InputSchema: json.RawMessage(`{
@@ -116,6 +126,7 @@ func (h *FileSystemHandler) ListTools(ctx context.Context) (*protocol.ListToolsR
 			}`),
 		},
 		{
+			// Tool Definition
 			Name:        "list_directory",
 			Description: "Get a detailed listing of all files and directories in a specified path.",
 			InputSchema: json.RawMessage(`{
@@ -130,6 +141,7 @@ func (h *FileSystemHandler) ListTools(ctx context.Context) (*protocol.ListToolsR
 			}`),
 		},
 		{
+			// Tool Definition
 			Name:        "move_file",
 			Description: "Move or rename files and directories.",
 			InputSchema: json.RawMessage(`{
@@ -147,8 +159,8 @@ func (h *FileSystemHandler) ListTools(ctx context.Context) (*protocol.ListToolsR
 				"required": ["source", "destination"]
 			}`),
 		},
-
 		{
+			// Tool Definition
 			Name:        "get_file_info",
 			Description: "Retrieve detailed metadata about a file or directory.",
 			InputSchema: json.RawMessage(`{
@@ -163,6 +175,7 @@ func (h *FileSystemHandler) ListTools(ctx context.Context) (*protocol.ListToolsR
 			}`),
 		},
 		{
+			// Tool Definition
 			Name:        "list_allowed_directories",
 			Description: "Returns the list of directories that this server is allowed to access.",
 			InputSchema: json.RawMessage(`{
@@ -172,6 +185,7 @@ func (h *FileSystemHandler) ListTools(ctx context.Context) (*protocol.ListToolsR
 			}`),
 		},
 		{
+			// Tool Definition
 			Name:        "append_to_file",
 			Description: "Add content to the end of a file. If the file doesn't exist, it will be created.",
 			InputSchema: json.RawMessage(`{
@@ -190,6 +204,7 @@ func (h *FileSystemHandler) ListTools(ctx context.Context) (*protocol.ListToolsR
 			}`),
 		},
 		{
+			// Tool Definition
 			Name:        "prepend_to_file",
 			Description: "Add content to the beginning of a file. If the file doesn't exist, it will be created.",
 			InputSchema: json.RawMessage(`{
@@ -208,6 +223,7 @@ func (h *FileSystemHandler) ListTools(ctx context.Context) (*protocol.ListToolsR
 			}`),
 		},
 		{
+			// Tool Definition
 			Name:        "replace_in_file",
 			Description: "Replace occurrences of a string in a file with new content.",
 			InputSchema: json.RawMessage(`{
@@ -235,60 +251,7 @@ func (h *FileSystemHandler) ListTools(ctx context.Context) (*protocol.ListToolsR
 			}`),
 		},
 		{
-			Name:        "insert_after_string",
-			Description: "Insert content after a specific occurrence of a string in a file.",
-			InputSchema: json.RawMessage(`{
-				"type": "object",
-				"properties": {
-					"path": {
-						"type": "string",
-						"description": "Path to the file"
-					},
-					"search": {
-						"type": "string",
-						"description": "String to search for"
-					},
-					"content": {
-						"type": "string",
-						"description": "Content to insert"
-					},
-					"occurrence": {
-						"type": "integer",
-						"description": "Which occurrence to insert after (default is 1, the first occurrence)",
-						"minimum": 1
-					}
-				},
-				"required": ["path", "search", "content"]
-			}`),
-		},
-		{
-			Name:        "insert_before_string",
-			Description: "Insert content before a specific occurrence of a string in a file.",
-			InputSchema: json.RawMessage(`{
-				"type": "object",
-				"properties": {
-					"path": {
-						"type": "string",
-						"description": "Path to the file"
-					},
-					"search": {
-						"type": "string",
-						"description": "String to search for"
-					},
-					"content": {
-						"type": "string",
-						"description": "Content to insert"
-					},
-					"occurrence": {
-						"type": "integer",
-						"description": "Which occurrence to insert before (default is 1, the first occurrence)",
-						"minimum": 1
-					}
-				},
-				"required": ["path", "search", "content"]
-			}`),
-		},
-		{
+			// Tool Definition
 			Name:        "insert_after_regex",
 			Description: "Insert content after a specific occurrence of a regular expression pattern in a file.",
 			InputSchema: json.RawMessage(`{
@@ -309,6 +272,34 @@ func (h *FileSystemHandler) ListTools(ctx context.Context) (*protocol.ListToolsR
 					"occurrence": {
 						"type": "integer",
 						"description": "Which occurrence to insert after (0 means all occurrences, 1+ for specific occurrence, default is 1)",
+						"minimum": 0
+					}
+				},
+				"required": ["path", "pattern", "content"]
+			}`),
+		},
+		{
+			// Tool Definition
+			Name:        "insert_before_regex",
+			Description: "Insert content before a specific occurrence of a regular expression pattern in a file.",
+			InputSchema: json.RawMessage(`{
+				"type": "object",
+				"properties": {
+					"path": {
+						"type": "string",
+						"description": "Path to the file"
+					},
+					"pattern": {
+						"type": "string",
+						"description": "Regular expression pattern to search for. Supports full regex syntax including anchors (^$), character classes ([a-z]), quantifiers (*, +, ?), groups, and more."
+					},
+					"content": {
+						"type": "string",
+						"description": "Content to insert"
+					},
+					"occurrence": {
+						"type": "integer",
+						"description": "Which occurrence to insert before (0 means all occurrences, 1+ for specific occurrence, default is 1)",
 						"minimum": 0
 					}
 				},
