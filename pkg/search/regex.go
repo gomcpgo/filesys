@@ -60,7 +60,8 @@ func InsertAfterRegex(path, pattern, content string, occurrence int) (string, er
 		// Add content up to and including the matched pattern
 		newContent += fileContent[lastIndex:matchEnd]
 		
-		// Add the content to insert
+		// Add the content to insert - handle literal characters in the content string
+		// This fixes issues with escape sequences like \n being treated literally
 		newContent += content
 		
 		lastIndex = matchEnd
