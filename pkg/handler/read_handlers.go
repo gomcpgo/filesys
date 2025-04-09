@@ -3,7 +3,6 @@ package handler
 import (
 	"fmt"
 	"log"
-	"os"
 	"strings"
 
 	"github.com/gomcpgo/filesys/pkg/fileread"
@@ -113,30 +112,24 @@ func (h *FileSystemHandler) handleReadMultipleFiles(args map[string]interface{})
 			continue
 		}
 
-		// Get file info to check size before reading
-		fileInfo, err := os.Stat(path)
-		if err != nil {
-			log.Printf("ERROR: read_multiple_files - failed to get file info %s: %v", path, err)
-			results = append(results, fmt.Sprintf("Error getting file info for %s: %v", path, err))
-			continue
-		}
-
-		// Check file size
-		if fileInfo.Size() > maxFileSize {
-			log.Printf("ERROR: read_multiple_files - file size %d bytes exceeds maximum allowed size of %d bytes: %s", fileInfo.Size(), maxFileSize, path)
-			results = append(results, fmt.Sprintf("File size %d bytes exceeds maximum allowed size of %d bytes: %s", fileInfo.Size(), maxFileSize, path))
-			continue
-		}
-
-		content, err := os.ReadFile(path)
+		// Use our optimized file reading function 
+		// For multiple files, we always read the entire file (no line ranges)
+		result, err := fileread.ReadFile(path, 0, 0, maxFileSize)
 		if err != nil {
 			log.Printf("ERROR: read_multiple_files - failed to read file %s: %v", path, err)
 			results = append(results, fmt.Sprintf("Error reading %s: %v", path, err))
 			continue
 		}
 
-		log.Printf("read_multiple_files - successfully read %d bytes from %s", len(content), path)
-		results = append(results, fmt.Sprintf("=== %s ===\n%s", path, string(content)))
+		// Add metadata if the file was truncated
+		if result.Truncated {
+			results = append(results, fmt.Sprintf("=== %s ===\n⚠️ File content was truncated (showing %d of %d bytes)\n%s", 
+				path, result.ContentSize, result.FileSize, result.Content))
+		} else {
+			results = append(results, fmt.Sprintf("=== %s ===\n%s", path, result.Content))
+		}
+		
+		log.Printf("read_multiple_files - successfully read %d bytes from %s", result.ContentSize, path)
 	}
 
 	log.Printf("read_multiple_files - completed reading files: %d successful results", len(results))

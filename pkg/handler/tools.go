@@ -60,7 +60,9 @@ func (h *FileSystemHandler) ListTools(ctx context.Context) (*protocol.ListToolsR
 			Name: "read_file",
 			Description: "Read the contents of a file from the file system, with support for partial reading by line range. " +
 				"For large files, you can specify start and end lines to read only a portion of the file. " +
-				"Returns file content along with metadata about the read operation. " +
+				"Returns the exact file content as the primary response (preserving all formatting and whitespace). " +
+				"For partial reads or truncated content, additional metadata is provided as a secondary response. " +
+				"Small files are read efficiently in a single operation, while larger files use optimized line-by-line reading. " +
 				"Only works within allowed directories.",
 			InputSchema: json.RawMessage(`{
 				"type": "object",
@@ -86,7 +88,10 @@ func (h *FileSystemHandler) ListTools(ctx context.Context) (*protocol.ListToolsR
 		{
 			// Tool Definition
 			Name:        "read_multiple_files",
-			Description: "Read the contents of multiple files simultaneously.",
+			Description: "Read the contents of multiple files simultaneously using optimized file reading. " +
+				"Returns exact file content preserving all formatting and whitespace. " +
+				"Automatically handles large files and provides truncation warnings when necessary. " +
+				"Only works within allowed directories.",
 			InputSchema: json.RawMessage(`{
 				"type": "object",
 				"properties": {
