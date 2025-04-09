@@ -39,50 +39,51 @@ func (h *FileSystemHandler) handleReadFile(args map[string]interface{}) (*protoc
 	}
 
 	// Use our smart file reading function
-	result, err := fileread.ReadFileLines(path, startLine, endLine, maxFileSize)
+	result, err := fileread.ReadFile(path, startLine, endLine, maxFileSize)
 	if err != nil {
 		log.Printf("ERROR: read_file - failed to read file %s: %v", path, err)
 		return nil, fmt.Errorf("failed to read file: %w", err)
 	}
 
-	// Prepare a message with metadata about the read operation
-	var metadataBuilder strings.Builder
-	
-	// If the file was truncated, add a warning message
-	if result.Truncated {
-		metadataBuilder.WriteString("⚠️ File content was truncated due to size limits.\n")
+	// Create content array - first element is ALWAYS the exact file content
+	contentArray := []protocol.ToolContent{
+		{
+			Type: "text",
+			Text: result.Content,
+		},
 	}
 	
-	// Add information about line range
-	metadataBuilder.WriteString(fmt.Sprintf("File: %s\n", path))
-	metadataBuilder.WriteString(fmt.Sprintf("Total lines: %d\n", result.TotalLines))
-	
-	if result.StartLine > 1 || result.EndLine < result.TotalLines {
-		metadataBuilder.WriteString(fmt.Sprintf("Showing lines %d to %d\n", result.StartLine, result.EndLine))
-	}
-	
-	metadataBuilder.WriteString(fmt.Sprintf("Content size: %d bytes\n", result.ContentSize))
-	
-	// If there's metadata and content, add a separator
-	var responseText string
-	if metadataBuilder.Len() > 0 && len(result.Content) > 0 {
-		responseText = metadataBuilder.String() + "\n---\n\n" + result.Content
-	} else if metadataBuilder.Len() > 0 {
-		responseText = metadataBuilder.String()
-	} else {
-		responseText = result.Content
+	// Only add metadata if it's a partial read or truncated
+	if result.IsPartial || result.Truncated {
+		var metadataBuilder strings.Builder
+		
+		// If the file was truncated, add a warning message
+		if result.Truncated {
+			metadataBuilder.WriteString("⚠️ File content was truncated due to size limits.\n")
+		}
+		
+		// Add information about file and line range
+		metadataBuilder.WriteString(fmt.Sprintf("File: %s\n", path))
+		metadataBuilder.WriteString(fmt.Sprintf("Total lines: %d\n", result.TotalLines))
+		
+		if result.StartLine > 1 || (result.EndLine > 0 && result.EndLine < result.TotalLines) {
+			metadataBuilder.WriteString(fmt.Sprintf("Showing lines %d to %d\n", result.StartLine, result.EndLine))
+		}
+		
+		metadataBuilder.WriteString(fmt.Sprintf("Content size: %d bytes\n", result.ContentSize))
+		
+		// Add metadata as second content element
+		contentArray = append(contentArray, protocol.ToolContent{
+			Type: "text",
+			Text: metadataBuilder.String(),
+		})
 	}
 
 	log.Printf("read_file - successfully read %d bytes (%d lines) from %s", 
 		result.ContentSize, result.ReadLines, path)
 		
 	return &protocol.CallToolResponse{
-		Content: []protocol.ToolContent{
-			{
-				Type: "text",
-				Text: responseText,
-			},
-		},
+		Content: contentArray,
 	}, nil
 }
 
