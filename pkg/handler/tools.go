@@ -58,16 +58,26 @@ func (h *FileSystemHandler) ListTools(ctx context.Context) (*protocol.ListToolsR
 		{
 			// Tool Definition
 			Name: "read_file",
-			Description: "Read the complete contents of a file from the file system. " +
-				"Handles various text encodings and provides detailed error messages " +
-				"if the file cannot be read. Use this tool when you need to examine " +
-				"the contents of a single file. Only works within allowed directories.",
+			Description: "Read the contents of a file from the file system, with support for partial reading by line range. " +
+				"For large files, you can specify start and end lines to read only a portion of the file. " +
+				"Returns file content along with metadata about the read operation. " +
+				"Only works within allowed directories.",
 			InputSchema: json.RawMessage(`{
 				"type": "object",
 				"properties": {
 					"path": {
 						"type": "string",
 						"description": "Path to the file to read"
+					},
+					"start_line": {
+						"type": "integer",
+						"description": "Line number to start reading from (1-indexed, optional). If not specified, starts from the first line.",
+						"minimum": 1
+					},
+					"end_line": {
+						"type": "integer",
+						"description": "Line number to end reading at, inclusive (optional). If not specified, reads to the end of file.",
+						"minimum": 1
 					}
 				},
 				"required": ["path"]
