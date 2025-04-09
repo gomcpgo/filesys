@@ -252,6 +252,39 @@ func (h *FileSystemHandler) ListTools(ctx context.Context) (*protocol.ListToolsR
 		},
 		{
 			// Tool Definition
+			Name:        "replace_in_file_regex",
+			Description: "Replace content matching a regular expression pattern in a file. Supports capture groups in the replacement (use $1, $2, etc.).",
+			InputSchema: json.RawMessage(`{
+				"type": "object",
+				"properties": {
+					"path": {
+						"type": "string",
+						"description": "Path to the file"
+					},
+					"pattern": {
+						"type": "string",
+						"description": "Regular expression pattern to search for. Supports full regex syntax including anchors (^$), character classes ([a-z]), quantifiers (*, +, ?), groups, and more."
+					},
+					"replace": {
+						"type": "string",
+						"description": "Content to replace matching patterns with. Can include capture group references ($1, $2, etc.)"
+					},
+					"occurrence": {
+						"type": "integer",
+						"description": "Which occurrence to replace (0 means all occurrences, 1+ for specific occurrence, default is all)",
+						"minimum": 0
+					},
+					"case_sensitive": {
+						"type": "boolean",
+						"description": "Whether the search is case sensitive (default true)",
+						"default": true
+					}
+				},
+				"required": ["path", "pattern", "replace"]
+			}`),
+		},
+		{
+			// Tool Definition
 			Name:        "insert_after_regex",
 			Description: "Insert content after a specific occurrence of a regular expression pattern in a file.",
 			InputSchema: json.RawMessage(`{

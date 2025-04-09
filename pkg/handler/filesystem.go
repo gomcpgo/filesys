@@ -41,6 +41,8 @@ func (h *FileSystemHandler) CallTool(ctx context.Context, req *protocol.CallTool
 		return h.handlePrependToFile(req.Arguments)
 	case "replace_in_file":
 		return h.handleReplaceInFile(req.Arguments)
+	case "replace_in_file_regex":
+		return h.handleReplaceInFileRegex(req.Arguments)
 	case "search_in_files":
 		return h.handleSearchInFiles(req.Arguments)
 	case "insert_after_regex":
