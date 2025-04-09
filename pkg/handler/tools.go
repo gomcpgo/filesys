@@ -58,16 +58,28 @@ func (h *FileSystemHandler) ListTools(ctx context.Context) (*protocol.ListToolsR
 		{
 			// Tool Definition
 			Name: "read_file",
-			Description: "Read the complete contents of a file from the file system. " +
-				"Handles various text encodings and provides detailed error messages " +
-				"if the file cannot be read. Use this tool when you need to examine " +
-				"the contents of a single file. Only works within allowed directories.",
+			Description: "Read the contents of a file from the file system, with support for partial reading by line range. " +
+				"For large files, you can specify start and end lines to read only a portion of the file. " +
+				"Returns the exact file content as the primary response (preserving all formatting and whitespace). " +
+				"For partial reads or truncated content, additional metadata is provided as a secondary response. " +
+				"Small files are read efficiently in a single operation, while larger files use optimized line-by-line reading. " +
+				"Only works within allowed directories.",
 			InputSchema: json.RawMessage(`{
 				"type": "object",
 				"properties": {
 					"path": {
 						"type": "string",
 						"description": "Path to the file to read"
+					},
+					"start_line": {
+						"type": "integer",
+						"description": "Line number to start reading from (1-indexed, optional). If not specified, starts from the first line.",
+						"minimum": 1
+					},
+					"end_line": {
+						"type": "integer",
+						"description": "Line number to end reading at, inclusive (optional). If not specified, reads to the end of file.",
+						"minimum": 1
 					}
 				},
 				"required": ["path"]
@@ -76,7 +88,10 @@ func (h *FileSystemHandler) ListTools(ctx context.Context) (*protocol.ListToolsR
 		{
 			// Tool Definition
 			Name:        "read_multiple_files",
-			Description: "Read the contents of multiple files simultaneously.",
+			Description: "Read the contents of multiple files simultaneously using optimized file reading. " +
+				"Returns exact file content preserving all formatting and whitespace. " +
+				"Automatically handles large files and provides truncation warnings when necessary. " +
+				"Only works within allowed directories.",
 			InputSchema: json.RawMessage(`{
 				"type": "object",
 				"properties": {
