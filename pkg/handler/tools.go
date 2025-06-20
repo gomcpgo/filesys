@@ -143,13 +143,48 @@ func (h *FileSystemHandler) ListTools(ctx context.Context) (*protocol.ListToolsR
 		{
 			// Tool Definition
 			Name:        "list_directory",
-			Description: "Get a detailed listing of all files and directories in a specified path.",
+			Description: "Get a detailed listing of all files and directories in a specified path, with advanced filtering and recursion options.",
 			InputSchema: json.RawMessage(`{
 				"type": "object",
 				"properties": {
 					"path": {
 						"type": "string",
 						"description": "Path of the directory to list"
+					},
+					"pattern": {
+						"type": "string",
+						"description": "Regular expression pattern to filter entries by name (optional)"
+					},
+					"file_type": {
+						"type": "string",
+						"description": "Filter by file type: 'file' for regular files only, 'dir' for directories only, or file extension like '.txt' (optional)"
+					},
+					"recursive": {
+						"type": "boolean",
+						"description": "Whether to list contents recursively through subdirectories (default: false)",
+						"default": false
+					},
+					"max_depth": {
+						"type": "integer",
+						"description": "Maximum recursion depth when recursive=true (0 for unlimited, default: 0)",
+						"default": 0,
+						"minimum": 0
+					},
+					"max_results": {
+						"type": "integer",
+						"description": "Maximum number of entries to return (default: 100)",
+						"default": 100,
+						"minimum": 1
+					},
+					"include_hidden": {
+						"type": "boolean",
+						"description": "Whether to include hidden files and directories (starting with '.') in the results (default: false)",
+						"default": false
+					},
+					"include_metadata": {
+						"type": "boolean",
+						"description": "Whether to include detailed metadata for each entry (size, modification time, permissions) (default: true)",
+						"default": true
 					}
 				},
 				"required": ["path"]
