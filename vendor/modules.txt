@@ -1,0 +1,7 @@
+# github.com/gomcpgo/mcp v0.1.1 => ../mcp
+## explicit; go 1.20
+github.com/gomcpgo/mcp/pkg/handler
+github.com/gomcpgo/mcp/pkg/protocol
+github.com/gomcpgo/mcp/pkg/server
+github.com/gomcpgo/mcp/pkg/transport
+# github.com/gomcpgo/mcp => ../mcp

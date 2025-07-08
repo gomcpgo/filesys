@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/gomcpgo/mcp/pkg/protocol"
 )
@@ -17,6 +18,16 @@ func NewFileSystemHandler() *FileSystemHandler {
 
 // CallTool handles execution of filesystem tools
 func (h *FileSystemHandler) CallTool(ctx context.Context, req *protocol.CallToolRequest) (*protocol.CallToolResponse, error) {
+	log.Printf("[FILESYS] CallTool invoked - tool: %s", req.Name)
+	
+	// Check if context is already cancelled
+	select {
+	case <-ctx.Done():
+		log.Printf("[FILESYS] CallTool context already cancelled for tool: %s, error: %v", req.Name, ctx.Err())
+		return nil, ctx.Err()
+	default:
+	}
+	
 	switch req.Name {
 	case "read_file":
 		return h.handleReadFile(req.Arguments)
@@ -50,6 +61,10 @@ func (h *FileSystemHandler) CallTool(ctx context.Context, req *protocol.CallTool
 	case "insert_before_regex":
 		return h.handleInsertBeforeRegex(req.Arguments)
 	default:
+		log.Printf("[FILESYS] Unknown tool requested: %s", req.Name)
 		return nil, fmt.Errorf("unknown tool: %s", req.Name)
 	}
+	
+	// Note: We can't add logging here because each case returns directly.
+	// To log completion, we'd need to modify each handler function.
 }
