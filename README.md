@@ -83,10 +83,43 @@ Add to `claude_desktop_config.json`:
 
 ## Security
 
-- All operations restricted to allowed directories
-- Path traversal prevention
-- Permission validation before operations
-- Proper error handling and logging
+The filesystem MCP server implements comprehensive security measures to prevent unauthorized file access:
+
+### Path Validation
+- **Symbolic link resolution**: All paths are resolved to their canonical form using `filepath.EvalSymlinks()` before validation
+- **Canonical path checking**: Paths are validated against allowed directories only after resolving all symbolic links
+- **Path traversal prevention**: Attempts to escape allowed directories using `../` or similar techniques are blocked
+- **Prefix matching protection**: Directory prefixes are validated with path separators to prevent `/allowed` from matching `/allowed_attacker`
+
+### Symbolic Link Handling
+- **Legitimate symlinks**: Symbolic links within allowed directories are permitted (if their target is also within allowed directories)
+- **Attack prevention**: Symbolic links pointing outside allowed directories are automatically blocked
+- **Broken symlinks**: Broken symbolic links (pointing to non-existent targets) are rejected for security
+- **Allowed directory symlinks**: Allowed directories themselves may be symbolic links (resolved during initialization)
+
+### Write Operation Security
+- **Non-existent paths**: When creating new files or directories, the parent directory chain is validated
+- **Parent validation**: Only paths whose parent directories are within allowed areas can be created
+- **Atomic validation**: Path resolution and validation occur atomically to prevent race conditions
+
+### Attack Prevention
+The server protects against:
+- Symlink-based directory traversal attacks
+- Path traversal with `../` sequences
+- Broken symlink exploitation
+- Prefix matching attacks (`/allowed` vs `/allowed_attacker`)
+- Nested symlink chains escaping allowed directories
+
+### Security Logging
+- All blocked access attempts are logged with "SECURITY:" prefix
+- Logs include both the requested path and its canonical resolution
+- Helps detect and investigate potential attack attempts
+
+### Best Practices
+- Configure `MCP_ALLOWED_DIRS` with the minimum necessary directories
+- Use absolute paths for allowed directories
+- Monitor logs for "SECURITY:" messages indicating blocked access attempts
+- Regularly review allowed directory configurations
 
 ## Building
 
