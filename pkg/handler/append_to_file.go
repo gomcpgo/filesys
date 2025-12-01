@@ -26,7 +26,7 @@ func (h *FileSystemHandler) handleAppendToFile(args map[string]interface{}) (*pr
 	
 	if !h.isPathAllowed(path) {
 		log.Printf("ERROR: append_to_file - access denied to path: %s", path)
-		return nil, fmt.Errorf("access to path is not allowed: %s", path)
+		return nil, NewAccessDeniedError(path)
 	}
 	
 	// Check if file exists

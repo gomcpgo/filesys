@@ -26,7 +26,7 @@ func (h *FileSystemHandler) handlePrependToFile(args map[string]interface{}) (*p
 	
 	if !h.isPathAllowed(path) {
 		log.Printf("ERROR: prepend_to_file - access denied to path: %s", path)
-		return nil, fmt.Errorf("access to path is not allowed: %s", path)
+		return nil, NewAccessDeniedError(path)
 	}
 	
 	// Check if file exists

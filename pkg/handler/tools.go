@@ -295,6 +295,11 @@ func (h *FileSystemHandler) ListTools(ctx context.Context) (*protocol.ListToolsR
 						"type": "integer",
 						"description": "Which occurrence to replace (0 means all, default is all)",
 						"minimum": 0
+					},
+					"dry_run": {
+						"type": "boolean",
+						"description": "Preview changes without applying them (default: false)",
+						"default": false
 					}
 				},
 				"required": ["path", "search", "replace"]
@@ -328,6 +333,11 @@ func (h *FileSystemHandler) ListTools(ctx context.Context) (*protocol.ListToolsR
 						"type": "boolean",
 						"description": "Whether the search is case sensitive (default true)",
 						"default": true
+					},
+					"dry_run": {
+						"type": "boolean",
+						"description": "Preview changes without applying them (default: false)",
+						"default": false
 					}
 				},
 				"required": ["path", "pattern", "replace"]
@@ -387,6 +397,37 @@ func (h *FileSystemHandler) ListTools(ctx context.Context) (*protocol.ListToolsR
 					}
 				},
 				"required": ["path", "pattern", "content"]
+			}`),
+		},
+		{
+			// Tool Definition
+			Name:        "replace_in_files",
+			Description: "Replace occurrences of a string across multiple files. Use search_in_files first to identify target files.",
+			InputSchema: json.RawMessage(`{
+				"type": "object",
+				"properties": {
+					"paths": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						},
+						"description": "Array of file paths to modify"
+					},
+					"search": {
+						"type": "string",
+						"description": "String to search for"
+					},
+					"replace": {
+						"type": "string",
+						"description": "String to replace with"
+					},
+					"dry_run": {
+						"type": "boolean",
+						"description": "Preview changes without applying them (default: false)",
+						"default": false
+					}
+				},
+				"required": ["paths", "search", "replace"]
 			}`),
 		},
 	}

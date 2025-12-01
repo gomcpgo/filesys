@@ -21,7 +21,7 @@ func (h *FileSystemHandler) handleCreateDirectory(args map[string]interface{}) (
 	log.Printf("create_directory - attempting to create directory: %s", path)
 	if !h.isPathAllowed(path) {
 		log.Printf("ERROR: create_directory - access denied to path: %s", path)
-		return nil, fmt.Errorf("access to path is not allowed: %s", path)
+		return nil, NewAccessDeniedError(path)
 	}
 
 	err := os.MkdirAll(path, 0755)
@@ -52,7 +52,7 @@ func (h *FileSystemHandler) handleListDirectory(args map[string]interface{}) (*p
 	
 	if !h.isPathAllowed(path) {
 		log.Printf("ERROR: list_directory - access denied to path: %s", path)
-		return nil, fmt.Errorf("access to path is not allowed: %s", path)
+		return nil, NewAccessDeniedError(path)
 	}
 	
 	// Extract optional parameters
