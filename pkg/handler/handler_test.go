@@ -599,3 +599,430 @@ func findSubstring(s, substr string) bool {
 	}
 	return false
 }
+
+
+// TestReplaceInFileRegexDryRun tests dry run mode for regex replacement
+func TestReplaceInFileRegexDryRun(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "filesys-test-")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	testFile := filepath.Join(tmpDir, "test.go")
+	originalContent := `func getValue() string {
+	return "value1"
+}
+
+func getOtherValue() string {
+	return "value2"
+}`
+	err = os.WriteFile(testFile, []byte(originalContent), 0644)
+	if err != nil {
+		t.Fatalf("Failed to write test file: %v", err)
+	}
+
+	os.Setenv("MCP_ALLOWED_DIRS", tmpDir)
+	defer os.Unsetenv("MCP_ALLOWED_DIRS")
+
+	allowedDirsMutex.Lock()
+	allowedDirsCache = nil
+	allowedDirsMutex.Unlock()
+
+	handler := NewFileSystemHandler()
+
+	args := map[string]interface{}{
+		"path":    testFile,
+		"pattern": `"value\d+"`,
+		"replace": `"replaced"`,
+		"dry_run": true,
+	}
+
+	resp, err := handler.handleReplaceInFileRegex(args)
+	if err != nil {
+		t.Fatalf("Regex dry run failed: %v", err)
+	}
+
+	responseText := resp.Content[0].Text
+
+	// Verify dry run indicator
+	if !contains(responseText, "dry run") {
+		t.Errorf("Response should indicate dry run mode, got: %s", responseText)
+	}
+
+	// Verify preview shows replacements
+	if !contains(responseText, "replaced") {
+		t.Errorf("Response should show replacement text, got: %s", responseText)
+	}
+
+	// Verify would be replaced message
+	if !contains(responseText, "would be replaced") {
+		t.Errorf("Response should say 'would be replaced', got: %s", responseText)
+	}
+
+	// CRITICAL: Verify file was NOT modified
+	content, err := os.ReadFile(testFile)
+	if err != nil {
+		t.Fatalf("Failed to read file: %v", err)
+	}
+	if string(content) != originalContent {
+		t.Errorf("File should NOT be modified in dry run.\nExpected:\n%s\n\nGot:\n%s", originalContent, string(content))
+	}
+}
+
+// TestReplaceInFileRegexWithCaptureGroups tests regex replacement with capture groups
+func TestReplaceInFileRegexWithCaptureGroups(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "filesys-test-")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	testFile := filepath.Join(tmpDir, "test.go")
+	originalContent := `func oldFunc1() {}
+func oldFunc2() {}
+func oldFunc3() {}`
+	err = os.WriteFile(testFile, []byte(originalContent), 0644)
+	if err != nil {
+		t.Fatalf("Failed to write test file: %v", err)
+	}
+
+	os.Setenv("MCP_ALLOWED_DIRS", tmpDir)
+	defer os.Unsetenv("MCP_ALLOWED_DIRS")
+
+	allowedDirsMutex.Lock()
+	allowedDirsCache = nil
+	allowedDirsMutex.Unlock()
+
+	handler := NewFileSystemHandler()
+
+	// Use capture group to preserve the number
+	args := map[string]interface{}{
+		"path":    testFile,
+		"pattern": `oldFunc(\d+)`,
+		"replace": `newFunc$1`,
+	}
+
+	resp, err := handler.handleReplaceInFileRegex(args)
+	if err != nil {
+		t.Fatalf("Regex replace with capture groups failed: %v", err)
+	}
+
+	// Verify success message
+	if !contains(resp.Content[0].Text, "Successfully replaced") {
+		t.Errorf("Response should indicate success, got: %s", resp.Content[0].Text)
+	}
+
+	// Verify file was modified with capture groups preserved
+	content, err := os.ReadFile(testFile)
+	if err != nil {
+		t.Fatalf("Failed to read file: %v", err)
+	}
+
+	expectedContent := `func newFunc1() {}
+func newFunc2() {}
+func newFunc3() {}`
+	if string(content) != expectedContent {
+		t.Errorf("Capture groups not preserved.\nExpected:\n%s\n\nGot:\n%s", expectedContent, string(content))
+	}
+}
+
+// TestReplaceInFileSpecificOccurrence tests replacing only a specific occurrence
+func TestReplaceInFileSpecificOccurrence(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "filesys-test-")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	testFile := filepath.Join(tmpDir, "test.txt")
+	originalContent := "apple banana apple cherry apple"
+	err = os.WriteFile(testFile, []byte(originalContent), 0644)
+	if err != nil {
+		t.Fatalf("Failed to write test file: %v", err)
+	}
+
+	os.Setenv("MCP_ALLOWED_DIRS", tmpDir)
+	defer os.Unsetenv("MCP_ALLOWED_DIRS")
+
+	allowedDirsMutex.Lock()
+	allowedDirsCache = nil
+	allowedDirsMutex.Unlock()
+
+	handler := NewFileSystemHandler()
+
+	// Replace only the 2nd occurrence
+	args := map[string]interface{}{
+		"path":       testFile,
+		"search":     "apple",
+		"replace":    "orange",
+		"occurrence": float64(2), // JSON numbers are float64
+	}
+
+	resp, err := handler.handleReplaceInFile(args)
+	if err != nil {
+		t.Fatalf("Replace specific occurrence failed: %v", err)
+	}
+
+	// Verify success
+	if !contains(resp.Content[0].Text, "Successfully replaced") {
+		t.Errorf("Response should indicate success, got: %s", resp.Content[0].Text)
+	}
+
+	// Verify only 2nd occurrence was replaced
+	content, err := os.ReadFile(testFile)
+	if err != nil {
+		t.Fatalf("Failed to read file: %v", err)
+	}
+
+	expectedContent := "apple banana orange cherry apple"
+	if string(content) != expectedContent {
+		t.Errorf("Only 2nd occurrence should be replaced.\nExpected: %q\nGot: %q", expectedContent, string(content))
+	}
+}
+
+// TestReplaceInFileNotFound tests behavior when search string is not found
+func TestReplaceInFileNotFound(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "filesys-test-")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	testFile := filepath.Join(tmpDir, "test.txt")
+	originalContent := "Hello World"
+	err = os.WriteFile(testFile, []byte(originalContent), 0644)
+	if err != nil {
+		t.Fatalf("Failed to write test file: %v", err)
+	}
+
+	os.Setenv("MCP_ALLOWED_DIRS", tmpDir)
+	defer os.Unsetenv("MCP_ALLOWED_DIRS")
+
+	allowedDirsMutex.Lock()
+	allowedDirsCache = nil
+	allowedDirsMutex.Unlock()
+
+	handler := NewFileSystemHandler()
+
+	args := map[string]interface{}{
+		"path":    testFile,
+		"search":  "notfound",
+		"replace": "replacement",
+	}
+
+	resp, err := handler.handleReplaceInFile(args)
+	// Should NOT return an error, just a message
+	if err != nil {
+		t.Fatalf("Should not return error when string not found, got: %v", err)
+	}
+
+	// Should return "not found" message
+	if !contains(resp.Content[0].Text, "not found") {
+		t.Errorf("Response should indicate string not found, got: %s", resp.Content[0].Text)
+	}
+
+	// File should remain unchanged
+	content, err := os.ReadFile(testFile)
+	if err != nil {
+		t.Fatalf("Failed to read file: %v", err)
+	}
+	if string(content) != originalContent {
+		t.Errorf("File should not be modified when string not found")
+	}
+}
+
+// TestReplaceInFilesPartialMatch tests batch replace where some files have matches and some don't
+func TestReplaceInFilesPartialMatch(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "filesys-test-")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	// File with match
+	file1 := filepath.Join(tmpDir, "file1.txt")
+	content1 := "Hello World"
+	err = os.WriteFile(file1, []byte(content1), 0644)
+	if err != nil {
+		t.Fatalf("Failed to write file1: %v", err)
+	}
+
+	// File without match
+	file2 := filepath.Join(tmpDir, "file2.txt")
+	content2 := "Goodbye World"
+	err = os.WriteFile(file2, []byte(content2), 0644)
+	if err != nil {
+		t.Fatalf("Failed to write file2: %v", err)
+	}
+
+	// Another file with match
+	file3 := filepath.Join(tmpDir, "file3.txt")
+	content3 := "Hello Again"
+	err = os.WriteFile(file3, []byte(content3), 0644)
+	if err != nil {
+		t.Fatalf("Failed to write file3: %v", err)
+	}
+
+	os.Setenv("MCP_ALLOWED_DIRS", tmpDir)
+	defer os.Unsetenv("MCP_ALLOWED_DIRS")
+
+	allowedDirsMutex.Lock()
+	allowedDirsCache = nil
+	allowedDirsMutex.Unlock()
+
+	handler := NewFileSystemHandler()
+
+	args := map[string]interface{}{
+		"paths":   []interface{}{file1, file2, file3},
+		"search":  "Hello",
+		"replace": "Hi",
+	}
+
+	resp, err := handler.handleReplaceInFiles(args)
+	if err != nil {
+		t.Fatalf("Batch replace failed: %v", err)
+	}
+
+	// Should report 2 of 3 files modified
+	if !contains(resp.Content[0].Text, "Replaced in 2 of 3 files") {
+		t.Errorf("Response should indicate 2 of 3 files modified, got: %s", resp.Content[0].Text)
+	}
+
+	// Should mention "No matches found" for file2
+	if !contains(resp.Content[0].Text, "No matches found") {
+		t.Errorf("Response should indicate no matches for file2, got: %s", resp.Content[0].Text)
+	}
+
+	// Verify file1 was modified
+	actual1, _ := os.ReadFile(file1)
+	if string(actual1) != "Hi World" {
+		t.Errorf("File1 should be modified. Expected %q, got %q", "Hi World", string(actual1))
+	}
+
+	// Verify file2 was NOT modified
+	actual2, _ := os.ReadFile(file2)
+	if string(actual2) != content2 {
+		t.Errorf("File2 should not be modified. Expected %q, got %q", content2, string(actual2))
+	}
+
+	// Verify file3 was modified
+	actual3, _ := os.ReadFile(file3)
+	if string(actual3) != "Hi Again" {
+		t.Errorf("File3 should be modified. Expected %q, got %q", "Hi Again", string(actual3))
+	}
+}
+
+// TestReplaceInFilesWithFileError tests batch replace when one file has an error
+func TestReplaceInFilesWithFileError(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "filesys-test-")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	// Valid file
+	file1 := filepath.Join(tmpDir, "file1.txt")
+	err = os.WriteFile(file1, []byte("Hello World"), 0644)
+	if err != nil {
+		t.Fatalf("Failed to write file1: %v", err)
+	}
+
+	// Non-existent file
+	file2 := filepath.Join(tmpDir, "nonexistent.txt")
+
+	// Another valid file
+	file3 := filepath.Join(tmpDir, "file3.txt")
+	err = os.WriteFile(file3, []byte("Hello Again"), 0644)
+	if err != nil {
+		t.Fatalf("Failed to write file3: %v", err)
+	}
+
+	os.Setenv("MCP_ALLOWED_DIRS", tmpDir)
+	defer os.Unsetenv("MCP_ALLOWED_DIRS")
+
+	allowedDirsMutex.Lock()
+	allowedDirsCache = nil
+	allowedDirsMutex.Unlock()
+
+	handler := NewFileSystemHandler()
+
+	args := map[string]interface{}{
+		"paths":   []interface{}{file1, file2, file3},
+		"search":  "Hello",
+		"replace": "Hi",
+	}
+
+	resp, err := handler.handleReplaceInFiles(args)
+	// Should not fail entirely - should process what it can
+	if err != nil {
+		t.Fatalf("Batch replace should not fail entirely: %v", err)
+	}
+
+	// Should report error for the missing file
+	if !contains(resp.Content[0].Text, "Error") {
+		t.Errorf("Response should report error for missing file, got: %s", resp.Content[0].Text)
+	}
+
+	// Verify file1 was still modified
+	actual1, _ := os.ReadFile(file1)
+	if string(actual1) != "Hi World" {
+		t.Errorf("File1 should be modified despite file2 error. Expected %q, got %q", "Hi World", string(actual1))
+	}
+
+	// Verify file3 was still modified
+	actual3, _ := os.ReadFile(file3)
+	if string(actual3) != "Hi Again" {
+		t.Errorf("File3 should be modified despite file2 error. Expected %q, got %q", "Hi Again", string(actual3))
+	}
+}
+
+// TestReplaceInFileEmptyFile tests replacing in an empty file
+func TestReplaceInFileEmptyFile(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "filesys-test-")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	testFile := filepath.Join(tmpDir, "empty.txt")
+	err = os.WriteFile(testFile, []byte(""), 0644)
+	if err != nil {
+		t.Fatalf("Failed to write empty file: %v", err)
+	}
+
+	os.Setenv("MCP_ALLOWED_DIRS", tmpDir)
+	defer os.Unsetenv("MCP_ALLOWED_DIRS")
+
+	allowedDirsMutex.Lock()
+	allowedDirsCache = nil
+	allowedDirsMutex.Unlock()
+
+	handler := NewFileSystemHandler()
+
+	args := map[string]interface{}{
+		"path":    testFile,
+		"search":  "anything",
+		"replace": "replacement",
+	}
+
+	resp, err := handler.handleReplaceInFile(args)
+	// Should not error
+	if err != nil {
+		t.Fatalf("Should not error on empty file: %v", err)
+	}
+
+	// Should indicate not found
+	if !contains(resp.Content[0].Text, "not found") {
+		t.Errorf("Response should indicate string not found in empty file, got: %s", resp.Content[0].Text)
+	}
+
+	// File should remain empty
+	content, err := os.ReadFile(testFile)
+	if err != nil {
+		t.Fatalf("Failed to read file: %v", err)
+	}
+	if len(content) != 0 {
+		t.Errorf("Empty file should remain empty, got: %q", string(content))
+	}
+}

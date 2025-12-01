@@ -21,7 +21,6 @@ func findReplacementMatches(content, searchString, replaceString string, occurre
 	lines := strings.Split(content, "\n")
 	var matches []replaceMatch
 	var newLines []string
-	totalFound := 0
 	currentOccurrence := 0
 
 	for lineNum, line := range lines {
@@ -30,26 +29,37 @@ func findReplacementMatches(content, searchString, replaceString string, occurre
 			count := strings.Count(line, searchString)
 			newLine := line
 
-			for i := 0; i < count; i++ {
-				totalFound++
-				currentOccurrence++
+			if occurrence == 0 {
+				// Replace all occurrences
+				newLine = strings.ReplaceAll(line, searchString, replaceString)
+				currentOccurrence += count
+				matches = append(matches, replaceMatch{
+					lineNum: lineNum + 1,
+					oldLine: line,
+					newLine: newLine,
+				})
+			} else {
+				// Replace only the specified occurrence - need to track position
+				searchPos := 0
+				for i := 0; i < count; i++ {
+					currentOccurrence++
+					idx := strings.Index(line[searchPos:], searchString)
+					if idx == -1 {
+						break
+					}
+					actualIdx := searchPos + idx
 
-				if occurrence == 0 {
-					// Replace all - do the replacement
-					newLine = strings.Replace(newLine, searchString, replaceString, 1)
-					matches = append(matches, replaceMatch{
-						lineNum: lineNum + 1,
-						oldLine: line,
-						newLine: strings.ReplaceAll(line, searchString, replaceString),
-					})
-				} else if currentOccurrence == occurrence {
-					// Replace only the specified occurrence
-					newLine = strings.Replace(newLine, searchString, replaceString, 1)
-					matches = append(matches, replaceMatch{
-						lineNum: lineNum + 1,
-						oldLine: line,
-						newLine: newLine,
-					})
+					if currentOccurrence == occurrence {
+						// Replace this specific occurrence
+						newLine = line[:actualIdx] + replaceString + line[actualIdx+len(searchString):]
+						matches = append(matches, replaceMatch{
+							lineNum: lineNum + 1,
+							oldLine: line,
+							newLine: newLine,
+						})
+						break
+					}
+					searchPos = actualIdx + len(searchString)
 				}
 			}
 			newLines = append(newLines, newLine)
@@ -70,7 +80,7 @@ func findReplacementMatches(content, searchString, replaceString string, occurre
 
 	newContent := strings.Join(newLines, "\n")
 	replacedCount := len(uniqueMatches)
-	if occurrence > 0 && occurrence <= totalFound {
+	if occurrence > 0 && replacedCount > 0 {
 		replacedCount = 1
 	}
 
