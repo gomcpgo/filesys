@@ -34,7 +34,7 @@ func (h *FileSystemHandler) handleReadFile(args map[string]interface{}) (*protoc
 
 	if !h.isPathAllowed(path) {
 		log.Printf("ERROR: read_file - access denied to path: %s", path)
-		return nil, fmt.Errorf("access to path is not allowed: %s", path)
+		return nil, NewAccessDeniedError(path)
 	}
 
 	// Use our smart file reading function

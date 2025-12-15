@@ -22,7 +22,7 @@ func (h *FileSystemHandler) handleGetFileInfo(args map[string]interface{}) (*pro
 	log.Printf("get_file_info - retrieving info for path: %s", path)
 	if !h.isPathAllowed(path) {
 		log.Printf("ERROR: get_file_info - access denied to path: %s", path)
-		return nil, fmt.Errorf("access to path is not allowed: %s", path)
+		return nil, NewAccessDeniedError(path)
 	}
 
 	info, err := os.Stat(path)
@@ -81,7 +81,7 @@ func (h *FileSystemHandler) handleSearchFiles(args map[string]interface{}) (*pro
 	log.Printf("search_files - searching in %s for pattern: %s", path, pattern)
 	if !h.isPathAllowed(path) {
 		log.Printf("ERROR: search_files - access denied to path: %s", path)
-		return nil, fmt.Errorf("access to path is not allowed: %s", path)
+		return nil, NewAccessDeniedError(path)
 	}
 
 	var matches []string

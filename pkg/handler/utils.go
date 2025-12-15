@@ -9,6 +9,36 @@ import (
 	"sync"
 )
 
+// AccessDeniedError provides detailed error information when path access is denied
+type AccessDeniedError struct {
+	RequestedPath   string
+	AllowedDirs     []string
+}
+
+func (e *AccessDeniedError) Error() string {
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("access to path '%s' is not allowed.\n", e.RequestedPath))
+	sb.WriteString("Allowed directories:\n")
+	for _, dir := range e.AllowedDirs {
+		sb.WriteString(fmt.Sprintf("  - %s\n", dir))
+	}
+	sb.WriteString("Hint: Use list_allowed_directories tool to see all accessible paths.")
+	return sb.String()
+}
+
+// NewAccessDeniedError creates a detailed access denied error
+func NewAccessDeniedError(requestedPath string) error {
+	allowedDirs, err := getAllowedDirs()
+	if err != nil {
+		// Fallback to simple error if we can't get allowed dirs
+		return fmt.Errorf("access to path '%s' is not allowed (could not retrieve allowed directories: %v)", requestedPath, err)
+	}
+	return &AccessDeniedError{
+		RequestedPath: requestedPath,
+		AllowedDirs:   allowedDirs,
+	}
+}
+
 const (
 	// Environment variable for allowed directories
 	AllowedDirsEnvVar = "MCP_ALLOWED_DIRS"

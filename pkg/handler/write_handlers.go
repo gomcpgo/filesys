@@ -23,7 +23,7 @@ func (h *FileSystemHandler) handleWriteFile(args map[string]interface{}) (*proto
 	log.Printf("write_file - attempting to write %d bytes to: %s", len(content), path)
 	if !h.isPathAllowed(path) {
 		log.Printf("ERROR: write_file - access denied to path: %s", path)
-		return nil, fmt.Errorf("access to path is not allowed: %s", path)
+		return nil, NewAccessDeniedError(path)
 	}
 
 	err := os.WriteFile(path, []byte(content), 0644)
@@ -56,9 +56,13 @@ func (h *FileSystemHandler) handleMoveFile(args map[string]interface{}) (*protoc
 	}
 
 	log.Printf("move_file - attempting to move %s to %s", source, destination)
-	if !h.isPathAllowed(source) || !h.isPathAllowed(destination) {
-		log.Printf("ERROR: move_file - access denied to path(s): source=%s, destination=%s", source, destination)
-		return nil, fmt.Errorf("access to path is not allowed")
+	if !h.isPathAllowed(source) {
+		log.Printf("ERROR: move_file - access denied to source path: %s", source)
+		return nil, NewAccessDeniedError(source)
+	}
+	if !h.isPathAllowed(destination) {
+		log.Printf("ERROR: move_file - access denied to destination path: %s", destination)
+		return nil, NewAccessDeniedError(destination)
 	}
 
 	err := os.Rename(source, destination)

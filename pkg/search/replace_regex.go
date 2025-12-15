@@ -178,3 +178,121 @@ func ReplaceWithRegexInString(content, pattern, replacement string, occurrence i
 
 	return newContent, 1, nil
 }
+
+
+// RegexMatch holds information about a single regex match for preview
+type RegexMatch struct {
+	LineNum  int
+	OldLine  string
+	NewLine  string
+	MatchStr string
+}
+
+// FindRegexMatches finds all matches of a regex pattern in a file and returns match details
+// without modifying the file. Useful for dry-run/preview mode.
+func FindRegexMatches(path, pattern, replacement string, occurrence int, caseSensitive bool) ([]RegexMatch, string, int, error) {
+	// Read file content
+	fileBytes, err := os.ReadFile(path)
+	if err != nil {
+		return nil, "", 0, fmt.Errorf("failed to read file: %w", err)
+	}
+	fileContent := string(fileBytes)
+
+	return FindRegexMatchesInString(fileContent, pattern, replacement, occurrence, caseSensitive)
+}
+
+// FindRegexMatchesInString finds all matches of a regex pattern in a string and returns match details
+func FindRegexMatchesInString(content, pattern, replacement string, occurrence int, caseSensitive bool) ([]RegexMatch, string, int, error) {
+	if len(content) == 0 {
+		return nil, "", 0, nil
+	}
+
+	// Compile the regular expression
+	var re *regexp.Regexp
+	var err error
+	if caseSensitive {
+		re, err = regexp.Compile(pattern)
+	} else {
+		re, err = regexp.Compile("(?i)" + pattern)
+	}
+	if err != nil {
+		return nil, "", 0, fmt.Errorf("invalid regex pattern: %w", err)
+	}
+
+	lines := splitLines(content)
+	var matches []RegexMatch
+	var newLines []string
+	currentOccurrence := 0
+
+	for lineNum, line := range lines {
+		lineMatches := re.FindAllStringIndex(line, -1)
+		if len(lineMatches) == 0 {
+			newLines = append(newLines, line)
+			continue
+		}
+
+		newLine := line
+		matchedThisLine := false
+
+		for _, match := range lineMatches {
+			currentOccurrence++
+
+			if occurrence == 0 || currentOccurrence == occurrence {
+				matchStr := line[match[0]:match[1]]
+				if !matchedThisLine {
+					// Apply all replacements for this line
+					if occurrence == 0 {
+						newLine = re.ReplaceAllString(line, replacement)
+					} else {
+						// Replace only this specific match
+						newLine = line[:match[0]] + re.ReplaceAllString(matchStr, replacement) + line[match[1]:]
+					}
+					matches = append(matches, RegexMatch{
+						LineNum:  lineNum + 1,
+						OldLine:  line,
+						NewLine:  newLine,
+						MatchStr: matchStr,
+					})
+					matchedThisLine = true
+				}
+			}
+		}
+		newLines = append(newLines, newLine)
+	}
+
+	newContent := joinLines(newLines)
+	replacedCount := len(matches)
+	if occurrence > 0 && len(matches) > 0 {
+		replacedCount = 1
+	}
+
+	return matches, newContent, replacedCount, nil
+}
+
+// splitLines splits content into lines preserving line endings
+func splitLines(content string) []string {
+	var lines []string
+	start := 0
+	for i := 0; i < len(content); i++ {
+		if content[i] == '\n' {
+			lines = append(lines, content[start:i])
+			start = i + 1
+		}
+	}
+	if start < len(content) {
+		lines = append(lines, content[start:])
+	}
+	return lines
+}
+
+// joinLines joins lines with newline characters
+func joinLines(lines []string) string {
+	if len(lines) == 0 {
+		return ""
+	}
+	result := lines[0]
+	for i := 1; i < len(lines); i++ {
+		result += "\n" + lines[i]
+	}
+	return result
+}

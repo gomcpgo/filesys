@@ -56,7 +56,7 @@ func (h *FileSystemHandler) handleSearchInFiles(args map[string]interface{}) (*p
 	// Check if path is allowed
 	if !h.isPathAllowed(path) {
 		log.Printf("ERROR: search_in_files - access denied to path: %s", path)
-		return nil, fmt.Errorf("access to path is not allowed: %s", path)
+		return nil, NewAccessDeniedError(path)
 	}
 
 	// Configure search options

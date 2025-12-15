@@ -43,7 +43,7 @@ func (h *FileSystemHandler) handleInsertBeforeRegex(args map[string]interface{})
 	
 	if !h.isPathAllowed(path) {
 		log.Printf("ERROR: insert_before_regex - access denied to path: %s", path)
-		return nil, fmt.Errorf("access to path is not allowed: %s", path)
+		return nil, NewAccessDeniedError(path)
 	}
 	
 	// Use the search package to insert content before regex pattern
