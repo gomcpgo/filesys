@@ -56,7 +56,7 @@ func secondFunction() {
 	testFile, cleanup := setupTestFile(t, "functions.go", content)
 	defer cleanup()
 
-	result, err := InsertAfterRegex(testFile, `func \w+\(\) {[\s\S]*?}`, "\n\n// New content here", 1)
+	result, err := InsertAfterRegex(testFile, `func \w+\(\) {[\s\S]*?}`, "\n\n// New content here", 1, false)
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
@@ -91,7 +91,7 @@ func secondFunction() {
 	testFile, cleanup := setupTestFile(t, "all_functions.go", content)
 	defer cleanup()
 
-	result, err := InsertAfterRegex(testFile, `func \w+\(\) {[\s\S]*?}`, "\n// Comment after function", 0)
+	result, err := InsertAfterRegex(testFile, `func \w+\(\) {[\s\S]*?}`, "\n// Comment after function", 0, false)
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
@@ -117,7 +117,7 @@ line 4`
 	testFile, cleanup := setupTestFile(t, "lines.txt", content)
 	defer cleanup()
 
-	result, err := InsertAfterRegex(testFile, `line 2`, "\nINSERTED CONTENT", 1)
+	result, err := InsertAfterRegex(testFile, `line 2`, "\nINSERTED CONTENT", 1, false)
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
@@ -145,7 +145,7 @@ repeated text`
 	testFile, cleanup := setupTestFile(t, "repeated.txt", content)
 	defer cleanup()
 
-	result, err := InsertAfterRegex(testFile, `repeated text`, " - INSERTED", 2)
+	result, err := InsertAfterRegex(testFile, `repeated text`, " - INSERTED", 2, false)
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
@@ -163,7 +163,7 @@ that doesn't contain the pattern`
 	testFile, cleanup := setupTestFile(t, "no_pattern.txt", content)
 	defer cleanup()
 
-	_, err := InsertAfterRegex(testFile, `non-existent pattern`, "\nINSERTED CONTENT", 1)
+	_, err := InsertAfterRegex(testFile, `non-existent pattern`, "\nINSERTED CONTENT", 1, false)
 	if err == nil {
 		t.Error("Expected an error but got none")
 	}
@@ -177,7 +177,7 @@ with valid text`
 	testFile, cleanup := setupTestFile(t, "invalid_regex.txt", content)
 	defer cleanup()
 
-	_, err := InsertAfterRegex(testFile, `[invalid regex`, "\nINSERTED CONTENT", 1)
+	_, err := InsertAfterRegex(testFile, `[invalid regex`, "\nINSERTED CONTENT", 1, false)
 	if err == nil {
 		t.Error("Expected an error but got none")
 	}
@@ -192,7 +192,7 @@ pattern here`
 	testFile, cleanup := setupTestFile(t, "occurrences.txt", content)
 	defer cleanup()
 
-	_, err := InsertAfterRegex(testFile, `pattern here`, "\nINSERTED CONTENT", 3)
+	_, err := InsertAfterRegex(testFile, `pattern here`, "\nINSERTED CONTENT", 3, false)
 	if err == nil {
 		t.Error("Expected an error but got none")
 	}
@@ -205,7 +205,7 @@ func TestEmptyFile(t *testing.T) {
 	testFile, cleanup := setupTestFile(t, "empty.txt", content)
 	defer cleanup()
 
-	_, err := InsertAfterRegex(testFile, `pattern`, "INSERTED CONTENT", 1)
+	_, err := InsertAfterRegex(testFile, `pattern`, "INSERTED CONTENT", 1, false)
 	if err == nil {
 		t.Error("Expected an error but got none")
 	}
@@ -233,7 +233,7 @@ func main() {
 	testFile, cleanup := setupTestFile(t, "package.go", content)
 	defer cleanup()
 
-	result, err := InsertAfterRegex(testFile, `^package .*`, "\n// Project: Example", 1)
+	result, err := InsertAfterRegex(testFile, `^package .*`, "\n// Project: Example", 1, false)
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
@@ -256,7 +256,7 @@ Function three`
 	testFile, cleanup := setupTestFile(t, "empty_insert.txt", content)
 	defer cleanup()
 
-	result, err := InsertAfterRegex(testFile, `Function two`, "", 1)
+	result, err := InsertAfterRegex(testFile, `Function two`, "", 1, false)
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
@@ -284,7 +284,7 @@ func TestComplexRegexWithCaptureGroups(t *testing.T) {
 	testFile, cleanup := setupTestFile(t, "complex.html", content)
 	defer cleanup()
 
-	result, err := InsertAfterRegex(testFile, `<p>(.*?)</p>`, "\n  <!-- Comment -->", 1)
+	result, err := InsertAfterRegex(testFile, `<p>(.*?)</p>`, "\n  <!-- Comment -->", 1, false)
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
@@ -318,7 +318,7 @@ function farewell() {
 
 	// Note: We're now using an actual newline character followed by spaces
 	// instead of the escape sequence \n in the insert content
-	result, err := InsertAfterRegex(testFile, `console\.log\("你好，世界"\);`, "\n  console.log(\"Processing...\");", 1)
+	result, err := InsertAfterRegex(testFile, `console\.log\("你好，世界"\);`, "\n  console.log(\"Processing...\");", 1, false)
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
@@ -341,7 +341,7 @@ Example 3 - Last`
 	testFile, cleanup := setupTestFile(t, "last_occurrence.txt", content)
 	defer cleanup()
 
-	result, err := InsertAfterRegex(testFile, `Example \d`, " - Last", 3)
+	result, err := InsertAfterRegex(testFile, `Example \d`, " - Last", 3, false)
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
@@ -360,7 +360,7 @@ func TestOverlappingPatterns(t *testing.T) {
 	testFile, cleanup := setupTestFile(t, "overlapping.txt", content)
 	defer cleanup()
 
-	result, err := InsertAfterRegex(testFile, `aa`, "X", 0)
+	result, err := InsertAfterRegex(testFile, `aa`, "X", 0, false)
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
@@ -409,7 +409,7 @@ func TestMultilinePatternAndContent(t *testing.T) {
     }`
 
 	// Match the constructor method with multiline pattern
-	result, err := InsertAfterRegex(testFile, `constructor\(\) {[^}]*}`, multilineInsert, 1)
+	result, err := InsertAfterRegex(testFile, `constructor\(\) {[^}]*}`, multilineInsert, 1, false)
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
@@ -487,6 +487,95 @@ func TestMultilineRegexWithDotAll(t *testing.T) {
 	)
 
 	result := strings.Join(newLines, "\n")
+
+	if result != expected {
+		t.Errorf("Expected:\n%s\n\nGot:\n%s", expected, result)
+	}
+}
+
+// TestInsertAfterRegex_WithAutoIndent_Spaces tests auto-indentation with spaces
+func TestInsertAfterRegex_WithAutoIndent_Spaces(t *testing.T) {
+	content := `package main
+
+func main() {
+    fmt.Println("hello")
+}`
+
+	expected := `package main
+
+func main() {
+    fmt.Println("hello")
+    newCode()
+}`
+
+	testFile, cleanup := setupTestFile(t, "indent_spaces.go", content)
+	defer cleanup()
+
+	result, err := InsertAfterRegex(testFile, `fmt\.Println\("hello"\)`, "\nnewCode()", 1, true)
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	if result != expected {
+		t.Errorf("Expected:\n%s\n\nGot:\n%s", expected, result)
+	}
+}
+
+// TestInsertAfterRegex_WithAutoIndent_Tabs tests auto-indentation with tabs
+func TestInsertAfterRegex_WithAutoIndent_Tabs(t *testing.T) {
+	content := `package main
+
+func main() {
+	if true {
+		fmt.Println("hello")
+	}
+}`
+
+	expected := `package main
+
+func main() {
+	if true {
+		fmt.Println("hello")
+		newCode()
+	}
+}`
+
+	testFile, cleanup := setupTestFile(t, "indent_tabs.go", content)
+	defer cleanup()
+
+	result, err := InsertAfterRegex(testFile, `fmt\.Println\("hello"\)`, "\nnewCode()", 1, true)
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	if result != expected {
+		t.Errorf("Expected:\n%s\n\nGot:\n%s", expected, result)
+	}
+}
+
+// TestInsertAfterRegex_WithAutoIndent_MultiLine tests auto-indentation with multiple lines
+func TestInsertAfterRegex_WithAutoIndent_MultiLine(t *testing.T) {
+	content := `function test() {
+    if (condition) {
+        doSomething();
+    }
+}`
+
+	expected := `function test() {
+    if (condition) {
+        doSomething();
+        newFunction();
+        anotherCall();
+    }
+}`
+
+	testFile, cleanup := setupTestFile(t, "multiline_indent.js", content)
+	defer cleanup()
+
+	result, err := InsertAfterRegex(testFile, `doSomething\(\);`, "\nnewFunction();\nanotherCall();", 1, true)
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
 
 	if result != expected {
 		t.Errorf("Expected:\n%s\n\nGot:\n%s", expected, result)

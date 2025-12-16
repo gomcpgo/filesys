@@ -37,22 +37,48 @@ func (h *FileSystemHandler) handleInsertBeforeRegex(args map[string]interface{})
 			return nil, fmt.Errorf("occurrence must be a non-negative integer (0 for all occurrences, 1 or more for specific occurrence)")
 		}
 	}
-	
-	log.Printf("insert_before_regex - attempting to insert before occurrence %d of pattern '%s' in %s", 
-		occurrence, pattern, path)
-	
+
+	// Check for autoIndent parameter (defaults to false)
+	autoIndent := false
+	if autoIndentVal, ok := args["autoIndent"].(bool); ok {
+		autoIndent = autoIndentVal
+	}
+
+	// Check for dry_run parameter (defaults to false)
+	dryRun := false
+	if dryRunVal, ok := args["dry_run"].(bool); ok {
+		dryRun = dryRunVal
+	}
+
+	log.Printf("insert_before_regex - attempting to insert before occurrence %d of pattern '%s' in %s (autoIndent: %v, dry_run: %v)",
+		occurrence, pattern, path, autoIndent, dryRun)
+
 	if !h.isPathAllowed(path) {
 		log.Printf("ERROR: insert_before_regex - access denied to path: %s", path)
 		return nil, NewAccessDeniedError(path)
 	}
-	
+
 	// Use the search package to insert content before regex pattern
-	newContent, err := search.InsertBeforeRegex(path, pattern, contentToInsert, occurrence)
+	newContent, err := search.InsertBeforeRegex(path, pattern, contentToInsert, occurrence, autoIndent)
 	if err != nil {
 		log.Printf("ERROR: insert_before_regex - %v", err)
 		return nil, err
 	}
-	
+
+	// Dry run mode - return preview without modifying file
+	if dryRun {
+		log.Printf("insert_before_regex - dry run: would insert content before occurrence %d of pattern '%s' in %s", occurrence, pattern, path)
+		return &protocol.CallToolResponse{
+			Content: []protocol.ToolContent{
+				{
+					Type: "text",
+					Text: fmt.Sprintf("Preview (dry run - no changes applied):\n\nWould insert %d character(s) before occurrence %d of pattern '%s'\n\nResulting content:\n%s",
+						len(contentToInsert), occurrence, pattern, newContent),
+				},
+			},
+		}, nil
+	}
+
 	// Write the new content back to the file
 	err = os.WriteFile(path, []byte(newContent), 0644)
 	if err != nil {
@@ -61,26 +87,24 @@ func (h *FileSystemHandler) handleInsertBeforeRegex(args map[string]interface{})
 	}
 	
 	if occurrence == 0 {
-		log.Printf("insert_before_regex - successfully inserted content before all occurrences of pattern '%s' in %s", 
+		log.Printf("insert_before_regex - successfully inserted content before all occurrences of pattern '%s' in %s",
 			pattern, path)
 		return &protocol.CallToolResponse{
 			Content: []protocol.ToolContent{
 				{
 					Type: "text",
-					Text: fmt.Sprintf("Successfully inserted content before all occurrences of pattern '%s' in %s", 
-						pattern, path),
+					Text: newContent,
 				},
 			},
 		}, nil
 	} else {
-		log.Printf("insert_before_regex - successfully inserted content before occurrence %d of pattern '%s' in %s", 
+		log.Printf("insert_before_regex - successfully inserted content before occurrence %d of pattern '%s' in %s",
 			occurrence, pattern, path)
 		return &protocol.CallToolResponse{
 			Content: []protocol.ToolContent{
 				{
 					Type: "text",
-					Text: fmt.Sprintf("Successfully inserted content before occurrence %d of pattern '%s' in %s", 
-						occurrence, pattern, path),
+					Text: newContent,
 				},
 			},
 		}, nil

@@ -366,6 +366,16 @@ func (h *FileSystemHandler) ListTools(ctx context.Context) (*protocol.ListToolsR
 						"type": "integer",
 						"description": "Which occurrence to insert after (0 means all occurrences, 1+ for specific occurrence, default is 1)",
 						"minimum": 0
+					},
+					"autoIndent": {
+						"type": "boolean",
+						"description": "Automatically indent inserted content to match surrounding code (default: false)",
+						"default": false
+					},
+					"dry_run": {
+						"type": "boolean",
+						"description": "Preview changes without applying them (default: false)",
+						"default": false
 					}
 				},
 				"required": ["path", "pattern", "content"]
@@ -394,6 +404,16 @@ func (h *FileSystemHandler) ListTools(ctx context.Context) (*protocol.ListToolsR
 						"type": "integer",
 						"description": "Which occurrence to insert before (0 means all occurrences, 1+ for specific occurrence, default is 1)",
 						"minimum": 0
+					},
+					"autoIndent": {
+						"type": "boolean",
+						"description": "Automatically indent inserted content to match surrounding code (default: false)",
+						"default": false
+					},
+					"dry_run": {
+						"type": "boolean",
+						"description": "Preview changes without applying them (default: false)",
+						"default": false
 					}
 				},
 				"required": ["path", "pattern", "content"]

@@ -16,6 +16,29 @@ type replaceMatch struct {
 	newLine     string
 }
 
+// buildPatternNotFoundErrorMessage creates a detailed error message when pattern is not found
+func buildPatternNotFoundErrorMessage(fileContent, searchString string) string {
+	var sb strings.Builder
+
+	sb.WriteString("Pattern not found in file.\n")
+	sb.WriteString(fmt.Sprintf("Searched for: %q\n", searchString))
+	sb.WriteString("\nPossible issues:\n")
+	sb.WriteString("- Whitespace mismatch (tabs vs spaces)\n")
+	sb.WriteString("- Escape sequences not matching\n")
+	sb.WriteString("- Pattern exists but with different formatting\n")
+	sb.WriteString("- Line endings (CRLF vs LF)\n")
+
+	// Check if pattern looks like it might be whitespace-related
+	if strings.ContainsAny(searchString, "\t") || strings.ContainsAny(searchString, "\n") {
+		sb.WriteString("\nNote: Your pattern contains whitespace (tabs/newlines). ")
+		sb.WriteString("Ensure the file content matches exactly, including indentation.\n")
+	}
+
+	sb.WriteString("\nSuggestion: Use replace_in_file_regex for flexible matching with patterns")
+
+	return sb.String()
+}
+
 // findReplacementMatches finds all occurrences of searchString and returns match details with line numbers
 func findReplacementMatches(content, searchString, replaceString string, occurrence int) ([]replaceMatch, string, int) {
 	lines := strings.Split(content, "\n")
@@ -153,14 +176,9 @@ func (h *FileSystemHandler) handleReplaceInFile(args map[string]interface{}) (*p
 
 	if totalOccurrences == 0 {
 		log.Printf("replace_in_file - search string '%s' not found in %s", searchString, path)
-		return &protocol.CallToolResponse{
-			Content: []protocol.ToolContent{
-				{
-					Type: "text",
-					Text: fmt.Sprintf("String '%s' not found in %s", searchString, path),
-				},
-			},
-		}, nil
+		// Return detailed error for LLM to understand why pattern wasn't found
+		errMsg := buildPatternNotFoundErrorMessage(fileContent, searchString)
+		return nil, fmt.Errorf(errMsg)
 	}
 
 	if occurrence > totalOccurrences {
