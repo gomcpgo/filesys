@@ -334,6 +334,11 @@ func (h *FileSystemHandler) ListTools(ctx context.Context) (*protocol.ListToolsR
 						"description": "Whether the search is case sensitive (default true)",
 						"default": true
 					},
+					"multiline": {
+						"type": "boolean",
+						"description": "Enable multiline mode where . matches newlines and ^ $ match line boundaries (default: false)",
+						"default": false
+					},
 					"dry_run": {
 						"type": "boolean",
 						"description": "Preview changes without applying them (default: false)",
@@ -370,6 +375,11 @@ func (h *FileSystemHandler) ListTools(ctx context.Context) (*protocol.ListToolsR
 					"autoIndent": {
 						"type": "boolean",
 						"description": "Automatically indent inserted content to match surrounding code (default: false)",
+						"default": false
+					},
+					"multiline": {
+						"type": "boolean",
+						"description": "Enable multiline mode where . matches newlines and ^ $ match line boundaries (default: false)",
 						"default": false
 					},
 					"dry_run": {
@@ -410,6 +420,11 @@ func (h *FileSystemHandler) ListTools(ctx context.Context) (*protocol.ListToolsR
 						"description": "Automatically indent inserted content to match surrounding code (default: false)",
 						"default": false
 					},
+					"multiline": {
+						"type": "boolean",
+						"description": "Enable multiline mode where . matches newlines and ^ $ match line boundaries (default: false)",
+						"default": false
+					},
 					"dry_run": {
 						"type": "boolean",
 						"description": "Preview changes without applying them (default: false)",
@@ -417,6 +432,74 @@ func (h *FileSystemHandler) ListTools(ctx context.Context) (*protocol.ListToolsR
 					}
 				},
 				"required": ["path", "pattern", "content"]
+			}`),
+		},
+		{
+			// Tool Definition
+			Name:        "insert_after_line",
+			Description: "Insert content after a specific line number in a file. More intuitive than regex for simple line-based insertions.",
+			InputSchema: json.RawMessage(`{
+				"type": "object",
+				"properties": {
+					"path": {
+						"type": "string",
+						"description": "Path to the file"
+					},
+					"line_number": {
+						"type": "integer",
+						"description": "Line number to insert after (1-indexed)",
+						"minimum": 1
+					},
+					"content": {
+						"type": "string",
+						"description": "Content to insert"
+					},
+					"autoIndent": {
+						"type": "boolean",
+						"description": "Automatically indent inserted content to match the target line's indentation (default: false)",
+						"default": false
+					},
+					"dry_run": {
+						"type": "boolean",
+						"description": "Preview changes without applying them (default: false)",
+						"default": false
+					}
+				},
+				"required": ["path", "line_number", "content"]
+			}`),
+		},
+		{
+			// Tool Definition
+			Name:        "insert_before_line",
+			Description: "Insert content before a specific line number in a file. More intuitive than regex for simple line-based insertions.",
+			InputSchema: json.RawMessage(`{
+				"type": "object",
+				"properties": {
+					"path": {
+						"type": "string",
+						"description": "Path to the file"
+					},
+					"line_number": {
+						"type": "integer",
+						"description": "Line number to insert before (1-indexed)",
+						"minimum": 1
+					},
+					"content": {
+						"type": "string",
+						"description": "Content to insert"
+					},
+					"autoIndent": {
+						"type": "boolean",
+						"description": "Automatically indent inserted content to match the target line's indentation (default: false)",
+						"default": false
+					},
+					"dry_run": {
+						"type": "boolean",
+						"description": "Preview changes without applying them (default: false)",
+						"default": false
+					}
+				},
+				"required": ["path", "line_number", "content"]
 			}`),
 		},
 		{

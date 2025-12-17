@@ -308,3 +308,107 @@ func joinLines(lines []string) string {
 	}
 	return result
 }
+
+
+// ReplaceWithRegexMultiline replaces content that matches a regex pattern in a file.
+// When multiline is true:
+//   - (?s) flag is added: dot (.) matches newlines
+//   - (?m) flag is added: ^ and $ match line boundaries
+//
+// Parameters:
+//   - path: Path to the file
+//   - pattern: Regular expression pattern to search for
+//   - replacement: Content to replace the pattern matches with (can use capture groups with $1, $2, etc.)
+//   - occurrence: Which occurrence to replace (0 for all occurrences, 1+ for specific occurrence)
+//   - caseSensitive: Whether the search is case sensitive
+//   - multiline: If true, enables multiline mode (dot matches newlines, ^ and $ match line boundaries)
+//
+// Returns:
+//   - The new content with replacements
+//   - Number of replacements made
+//   - Error if any
+func ReplaceWithRegexMultiline(path, pattern, replacement string, occurrence int, caseSensitive bool, multiline bool) (string, int, error) {
+	// Read file content
+	fileBytes, err := os.ReadFile(path)
+	if err != nil {
+		return "", 0, fmt.Errorf("failed to read file: %w", err)
+	}
+	fileContent := string(fileBytes)
+
+	// Special case: empty file should return empty content with 0 replacements
+	if len(fileContent) == 0 {
+		return "", 0, nil
+	}
+
+	// Build the pattern with flags
+	compiledPattern := pattern
+	if multiline {
+		// (?s) makes . match newlines, (?m) makes ^ and $ match line boundaries
+		compiledPattern = "(?sm)" + compiledPattern
+	}
+	if !caseSensitive {
+		compiledPattern = "(?i)" + compiledPattern
+	}
+
+	// Compile the regular expression
+	re, err := regexp.Compile(compiledPattern)
+	if err != nil {
+		return "", 0, fmt.Errorf("invalid regex pattern: %w", err)
+	}
+
+	// If we're replacing all occurrences
+	if occurrence == 0 {
+		allMatches := re.FindAllStringSubmatchIndex(fileContent, -1)
+		if len(allMatches) == 0 {
+			return "", 0, fmt.Errorf("pattern '%s' not found in file", pattern)
+		}
+
+		newContent := ""
+		lastIndex := 0
+		replacementCount := 0
+
+		for _, match := range allMatches {
+			// Add the text before this match
+			newContent += fileContent[lastIndex:match[0]]
+
+			// Apply the replacement with capture groups
+			matchText := fileContent[match[0]:match[1]]
+			replacedText := re.ReplaceAllString(matchText, replacement)
+			newContent += replacedText
+
+			lastIndex = match[1]
+			replacementCount++
+		}
+
+		// Add any remaining content
+		if lastIndex < len(fileContent) {
+			newContent += fileContent[lastIndex:]
+		}
+
+		return newContent, replacementCount, nil
+	}
+
+	// For specific occurrences, we need more control
+	allMatches := re.FindAllStringSubmatchIndex(fileContent, -1)
+	if len(allMatches) == 0 {
+		return "", 0, fmt.Errorf("pattern '%s' not found in file", pattern)
+	}
+
+	if occurrence > len(allMatches) {
+		return "", 0, fmt.Errorf("specified occurrence %d exceeds total matches %d",
+			occurrence, len(allMatches))
+	}
+
+	// Get the specific match we want to replace (1-indexed for occurrences)
+	matchIndex := occurrence - 1
+	match := allMatches[matchIndex]
+
+	// Build the new content with the replacement
+	newContent := fileContent[:match[0]]
+	matchText := fileContent[match[0]:match[1]]
+	replacedText := re.ReplaceAllString(matchText, replacement)
+	newContent += replacedText
+	newContent += fileContent[match[1]:]
+
+	return newContent, 1, nil
+}

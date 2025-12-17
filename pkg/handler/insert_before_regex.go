@@ -50,8 +50,14 @@ func (h *FileSystemHandler) handleInsertBeforeRegex(args map[string]interface{})
 		dryRun = dryRunVal
 	}
 
-	log.Printf("insert_before_regex - attempting to insert before occurrence %d of pattern '%s' in %s (autoIndent: %v, dry_run: %v)",
-		occurrence, pattern, path, autoIndent, dryRun)
+	// Check for multiline parameter (defaults to false)
+	multiline := false
+	if multilineVal, ok := args["multiline"].(bool); ok {
+		multiline = multilineVal
+	}
+
+	log.Printf("insert_before_regex - attempting to insert before occurrence %d of pattern '%s' in %s (autoIndent: %v, dry_run: %v, multiline: %v)",
+		occurrence, pattern, path, autoIndent, dryRun, multiline)
 
 	if !h.isPathAllowed(path) {
 		log.Printf("ERROR: insert_before_regex - access denied to path: %s", path)
@@ -59,7 +65,13 @@ func (h *FileSystemHandler) handleInsertBeforeRegex(args map[string]interface{})
 	}
 
 	// Use the search package to insert content before regex pattern
-	newContent, err := search.InsertBeforeRegex(path, pattern, contentToInsert, occurrence, autoIndent)
+	var newContent string
+	var err error
+	if multiline {
+		newContent, err = search.InsertBeforeRegexMultiline(path, pattern, contentToInsert, occurrence, autoIndent, true)
+	} else {
+		newContent, err = search.InsertBeforeRegex(path, pattern, contentToInsert, occurrence, autoIndent)
+	}
 	if err != nil {
 		log.Printf("ERROR: insert_before_regex - %v", err)
 		return nil, err

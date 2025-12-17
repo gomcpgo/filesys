@@ -49,6 +49,10 @@ func (h *FileSystemHandler) CallTool(ctx context.Context, req *protocol.CallTool
 		return h.handleInsertAfterRegex(req.Arguments)
 	case "insert_before_regex":
 		return h.handleInsertBeforeRegex(req.Arguments)
+	case "insert_after_line":
+		return h.handleInsertAfterLine(req.Arguments)
+	case "insert_before_line":
+		return h.handleInsertBeforeLine(req.Arguments)
 	case "replace_in_files":
 		return h.handleReplaceInFiles(req.Arguments)
 	default:
