@@ -812,15 +812,18 @@ func TestReplaceInFileNotFound(t *testing.T) {
 	}
 
 	resp, err := handler.handleReplaceInFile(args)
-	// Should NOT return an error, just a message
-	if err != nil {
-		t.Fatalf("Should not return error when string not found, got: %v", err)
+	// After Phase 1 fix: Should return error when string not found
+	if err == nil {
+		t.Fatalf("Should return error when string not found")
 	}
 
-	// Should return "not found" message
-	if !contains(resp.Content[0].Text, "not found") {
-		t.Errorf("Response should indicate string not found, got: %s", resp.Content[0].Text)
+	// Error message should be informative
+	errMsg := err.Error()
+	if !contains(errMsg, "Pattern not found") {
+		t.Errorf("Error should indicate pattern not found, got: %v", err)
 	}
+
+	_ = resp // Response is nil on error
 
 	// File should remain unchanged
 	content, err := os.ReadFile(testFile)
@@ -1007,15 +1010,18 @@ func TestReplaceInFileEmptyFile(t *testing.T) {
 	}
 
 	resp, err := handler.handleReplaceInFile(args)
-	// Should not error
-	if err != nil {
-		t.Fatalf("Should not error on empty file: %v", err)
+	// After Phase 1 fix: Should return error when string not found
+	if err == nil {
+		t.Fatalf("Should error when string not found in empty file")
 	}
 
-	// Should indicate not found
-	if !contains(resp.Content[0].Text, "not found") {
-		t.Errorf("Response should indicate string not found in empty file, got: %s", resp.Content[0].Text)
+	// Error should indicate pattern not found
+	errMsg := err.Error()
+	if !contains(errMsg, "Pattern not found") {
+		t.Errorf("Error should indicate pattern not found, got: %v", err)
 	}
+
+	_ = resp // Response is nil on error
 
 	// File should remain empty
 	content, err := os.ReadFile(testFile)
@@ -1024,5 +1030,182 @@ func TestReplaceInFileEmptyFile(t *testing.T) {
 	}
 	if len(content) != 0 {
 		t.Errorf("Empty file should remain empty, got: %q", string(content))
+	}
+}
+
+// TestInsertAfterRegexDryRun tests dry run mode for insert_after_regex
+func TestInsertAfterRegexDryRun(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "filesys-insert-test-")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	testFile := filepath.Join(tmpDir, "test.go")
+	originalContent := "package main\n\nimport (\n\t\"fmt\"\n)\n\nfunc main() {\n}\n"
+	err = os.WriteFile(testFile, []byte(originalContent), 0644)
+	if err != nil {
+		t.Fatalf("Failed to write test file: %v", err)
+	}
+
+	os.Setenv("MCP_ALLOWED_DIRS", tmpDir)
+	defer os.Unsetenv("MCP_ALLOWED_DIRS")
+
+	allowedDirsMutex.Lock()
+	allowedDirsCache = nil
+	allowedDirsMutex.Unlock()
+
+	handler := NewFileSystemHandler()
+
+	// Test dry run mode
+	args := map[string]interface{}{
+		"path":       testFile,
+		"pattern":    "\"fmt\"",
+		"content":    "\n\t\"os\"",
+		"occurrence": 1,
+		"autoIndent": false,
+		"dry_run":    true,
+	}
+
+	resp, err := handler.handleInsertAfterRegex(args)
+	if err != nil {
+		t.Fatalf("Insert after regex dry run failed: %v", err)
+	}
+
+	// Check response indicates dry run
+	responseText := resp.Content[0].Text
+	if !contains(responseText, "dry run") {
+		t.Errorf("Response should indicate dry run mode, got: %s", responseText)
+	}
+
+	// File should NOT be modified in dry run
+	content, err := os.ReadFile(testFile)
+	if err != nil {
+		t.Fatalf("Failed to read file: %v", err)
+	}
+
+	if string(content) != originalContent {
+		t.Errorf("File should not be modified in dry run.\nExpected:\n%s\n\nGot:\n%s", originalContent, string(content))
+	}
+
+	// Verify preview shows the inserted content
+	if !contains(responseText, "Resulting content") {
+		t.Error("Dry run response should show resulting content")
+	}
+}
+
+// TestInsertBeforeRegexDryRun tests dry run mode for insert_before_regex
+func TestInsertBeforeRegexDryRun(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "filesys-insert-test-")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	testFile := filepath.Join(tmpDir, "test.go")
+	originalContent := "package main\n\nimport (\n\t\"fmt\"\n)\n\nfunc main() {\n}\n"
+	err = os.WriteFile(testFile, []byte(originalContent), 0644)
+	if err != nil {
+		t.Fatalf("Failed to write test file: %v", err)
+	}
+
+	os.Setenv("MCP_ALLOWED_DIRS", tmpDir)
+	defer os.Unsetenv("MCP_ALLOWED_DIRS")
+
+	allowedDirsMutex.Lock()
+	allowedDirsCache = nil
+	allowedDirsMutex.Unlock()
+
+	handler := NewFileSystemHandler()
+
+	// Test dry run mode
+	args := map[string]interface{}{
+		"path":       testFile,
+		"pattern":    "\"fmt\"",
+		"content":    "\"io\"\n\t",
+		"occurrence": 1,
+		"autoIndent": false,
+		"dry_run":    true,
+	}
+
+	resp, err := handler.handleInsertBeforeRegex(args)
+	if err != nil {
+		t.Fatalf("Insert before regex dry run failed: %v", err)
+	}
+
+	// Check response indicates dry run
+	responseText := resp.Content[0].Text
+	if !contains(responseText, "dry run") {
+		t.Errorf("Response should indicate dry run mode, got: %s", responseText)
+	}
+
+	// File should NOT be modified in dry run
+	content, err := os.ReadFile(testFile)
+	if err != nil {
+		t.Fatalf("Failed to read file: %v", err)
+	}
+
+	if string(content) != originalContent {
+		t.Errorf("File should not be modified in dry run.\nExpected:\n%s\n\nGot:\n%s", originalContent, string(content))
+	}
+
+	// Verify preview shows the inserted content
+	if !contains(responseText, "Resulting content") {
+		t.Error("Dry run response should show resulting content")
+	}
+}
+
+// TestInsertAfterRegexActual tests actual insertion (not dry run)
+func TestInsertAfterRegexActual(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "filesys-insert-test-")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	testFile := filepath.Join(tmpDir, "test.go")
+	originalContent := "package main\n\nimport (\n\t\"fmt\"\n)\n\nfunc main() {\n}\n"
+	err = os.WriteFile(testFile, []byte(originalContent), 0644)
+	if err != nil {
+		t.Fatalf("Failed to write test file: %v", err)
+	}
+
+	os.Setenv("MCP_ALLOWED_DIRS", tmpDir)
+	defer os.Unsetenv("MCP_ALLOWED_DIRS")
+
+	allowedDirsMutex.Lock()
+	allowedDirsCache = nil
+	allowedDirsMutex.Unlock()
+
+	handler := NewFileSystemHandler()
+
+	// Test actual insertion (not dry run)
+	args := map[string]interface{}{
+		"path":       testFile,
+		"pattern":    "\"fmt\"",
+		"content":    "\n\t\"os\"",
+		"occurrence": 1,
+		"autoIndent": false,
+		"dry_run":    false,
+	}
+
+	resp, err := handler.handleInsertAfterRegex(args)
+	if err != nil {
+		t.Fatalf("Insert after regex actual insertion failed: %v", err)
+	}
+
+	// File SHOULD be modified
+	content, err := os.ReadFile(testFile)
+	if err != nil {
+		t.Fatalf("Failed to read file: %v", err)
+	}
+
+	if !contains(string(content), "\"os\"") {
+		t.Error("File should be modified with 'os' import added")
+	}
+
+	// Verify response shows the result
+	if !contains(resp.Content[0].Text, "\"os\"") {
+		t.Error("Response should show the modified content")
 	}
 }

@@ -12,11 +12,12 @@ import (
 //   - pattern: Regular expression pattern to search for
 //   - content: Content to insert before the pattern match
 //   - occurrence: Which occurrence to insert before (1-based indexing, 0 means all occurrences)
+//   - autoIndent: If true, automatically indents inserted content to match surrounding code
 //
 // Returns:
 //   - The new content with insertions
 //   - Error if any
-func InsertBeforeRegex(path, pattern, content string, occurrence int) (string, error) {
+func InsertBeforeRegex(path, pattern, content string, occurrence int, autoIndent bool) (string, error) {
 	// Read file content
 	fileBytes, err := os.ReadFile(path)
 	if err != nil {
@@ -51,33 +52,76 @@ func InsertBeforeRegex(path, pattern, content string, occurrence int) (string, e
 	// Handle the "all occurrences" case or specific occurrence
 	for i, idx := range indexes {
 		matchStart := idx[0] // Start index of the match
+		matchEnd := idx[1]   // End index of the match
 
 		// If targeting specific occurrence and this isn't it, skip insertion
 		if occurrence > 0 && i+1 != occurrence {
-			if i+1 < occurrence {
-				continue
-			}
-			// For occurrences after the one we're targeting,
-			// just add the content up to this point and continue
-			newContent += fileContent[lastIndex:idx[1]]
-			lastIndex = idx[1]
 			continue
 		}
 
-		// Add content up to the matched pattern
-		newContent += fileContent[lastIndex:matchStart]
+		// Prepare the content to insert
+		insertContent := content
 
-		// Insert the new content before the match
-		newContent += content
+		// If autoIndent is enabled, we need to insert on a new line with proper indentation
+		if autoIndent {
+			// Find the line containing the match to extract its indentation
+			lineStart := matchStart
+			for lineStart > 0 && fileContent[lineStart-1] != '\n' {
+				lineStart--
+			}
 
-		// Add the matched pattern itself
-		newContent += fileContent[matchStart:idx[1]]
+			// Extract the indentation of the current line
+			lineIndent := ""
+			for j := lineStart; j < len(fileContent) && (fileContent[j] == ' ' || fileContent[j] == '\t'); j++ {
+				lineIndent += string(fileContent[j])
+			}
 
-		// Update lastIndex to point to the end of this match
-		lastIndex = idx[1]
+			// For autoIndent, we insert content as new line(s) before the current line
+			// First, add everything up to the line start
+			if lastIndex <= lineStart {
+				newContent += fileContent[lastIndex:lineStart]
+			}
+
+			// Apply indentation to each line of the content
+			if lineIndent != "" {
+				lines := splitLines(content)
+				var indentedLines []string
+				for _, line := range lines {
+					if len(line) > 0 {
+						indentedLines = append(indentedLines, lineIndent+line)
+					} else {
+						indentedLines = append(indentedLines, "")
+					}
+				}
+				insertContent = joinLines(indentedLines)
+				// Ensure trailing newline for proper line separation
+				if len(insertContent) > 0 && insertContent[len(insertContent)-1] != '\n' {
+					insertContent += "\n"
+				}
+			}
+
+			// Add the indented content
+			newContent += insertContent
+
+			// Add the original line (from lineStart to matchEnd, which includes indentation and match)
+			newContent += fileContent[lineStart:matchEnd]
+
+			lastIndex = matchEnd
+		} else {
+			// Without autoIndent, just insert directly before the match
+			newContent += fileContent[lastIndex:matchStart]
+			newContent += insertContent
+			newContent += fileContent[matchStart:matchEnd]
+			lastIndex = matchEnd
+		}
+
+		// If targeting specific occurrence and we've handled it, we're done processing matches
+		if occurrence > 0 && i+1 == occurrence {
+			break
+		}
 	}
 
-	// Add any remaining content after the last processed match
+	// Add any remaining content after the last match or insertion
 	if lastIndex < len(fileContent) {
 		newContent += fileContent[lastIndex:]
 	}

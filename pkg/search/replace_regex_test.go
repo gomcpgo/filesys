@@ -3,6 +3,7 @@ package search
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -192,23 +193,31 @@ func TestCaseInsensitiveReplace(t *testing.T) {
 }
 
 // TestNoMatchReplace tests behavior when no matches are found
+// After Phase 1 fix: Now returns error instead of silently returning unchanged content
 func TestNoMatchReplace(t *testing.T) {
 	content := `This content has no matches.`
-	
+
 	testFile, cleanup := setupTestFileForReplace(t, "nomatch.txt", content)
 	defer cleanup()
 
 	result, count, err := ReplaceWithRegex(testFile, "nonexistent", "replacement", 0, true)
-	if err != nil {
-		t.Fatalf("Unexpected error: %v", err)
+
+	// After fix: should return error when pattern not found
+	if err == nil {
+		t.Fatalf("Expected error when pattern not found, but got none")
+	}
+
+	// Error should be informative
+	if !strings.Contains(err.Error(), "Pattern not found") {
+		t.Errorf("Expected error about pattern not found, got: %v", err)
 	}
 
 	if count != 0 {
 		t.Errorf("Expected 0 replacements, got %d", count)
 	}
 
-	if result != content {
-		t.Errorf("Expected content to be unchanged")
+	if result != "" {
+		t.Errorf("Expected empty result on error, got: %s", result)
 	}
 }
 
@@ -444,5 +453,68 @@ func calculateAverage(numbers []int) float64 {
 
 	if result != expected {
 		t.Errorf("Expected:\n%s\nGot:\n%s", expected, result)
+	}
+}
+
+// TestReplaceRegex_PatternNotFound_ShowsContext tests that regex pattern not found error provides helpful context
+// This reproduces Issue #5 from the MCP_FILESYSTEM_ISSUES.md docs
+func TestReplaceRegex_PatternNotFound_ShowsContext(t *testing.T) {
+	content := `package credits
+
+import (
+    "context"
+    "database/sql"
+)
+
+func NewBatchTracker(
+    supabaseClient *supabase.Client,
+) *BatchTracker {
+    // ...
+}`
+
+	testFile, cleanup := setupTestFileForReplace(t, "batch.go", content)
+	defer cleanup()
+
+	// This pattern fails to match (multiline issue with literal \n)
+	pattern := `func NewBatchTracker\(\n\tsupabaseClient.*`
+
+	_, _, err := ReplaceWithRegex(testFile, pattern, "replacement", 1, true)
+
+	// Error should be actionable for LLM
+	if err == nil {
+		t.Fatal("Expected error when pattern not found, but got none")
+	}
+
+	errMsg := err.Error()
+
+	// Error should mention pattern not found
+	if !strings.Contains(errMsg, "Pattern not found") && !strings.Contains(errMsg, "not found") {
+		t.Errorf("Expected error about pattern not found, got: %v", err)
+	}
+
+	// Error should provide helpful hints about multiline patterns
+	if !strings.Contains(errMsg, "multiline") && !strings.Contains(errMsg, "Multiline") && !strings.Contains(errMsg, "whitespace") {
+		t.Logf("Helpful hint: Error could mention multiline patterns: %v", err)
+	}
+}
+
+// TestReplaceRegex_InvalidPattern tests that invalid regex patterns return clear errors
+func TestReplaceRegex_InvalidPattern(t *testing.T) {
+	content := `Some content here`
+
+	testFile, cleanup := setupTestFileForReplace(t, "invalid.txt", content)
+	defer cleanup()
+
+	// Invalid regex pattern
+	_, _, err := ReplaceWithRegex(testFile, "[invalid", "replacement", 0, true)
+
+	if err == nil {
+		t.Fatal("Expected error for invalid regex pattern")
+	}
+
+	errMsg := err.Error()
+	// Should mention it's an invalid pattern
+	if !strings.Contains(errMsg, "invalid") && !strings.Contains(errMsg, "Invalid") {
+		t.Errorf("Expected error to mention invalid pattern: %v", err)
 	}
 }

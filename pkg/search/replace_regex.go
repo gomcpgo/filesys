@@ -47,7 +47,10 @@ func ReplaceWithRegex(path, pattern, replacement string, occurrence int, caseSen
 		// FindAllStringSubmatchIndex gives us access to capture groups
 		allMatches := re.FindAllStringSubmatchIndex(fileContent, -1)
 		if len(allMatches) == 0 {
-			return fileContent, 0, nil
+			return "", 0, fmt.Errorf("Pattern not found in file.\n"+
+				"Pattern: %q\n"+
+				"Note: For multiline patterns, the pattern must match content exactly including whitespace.\n"+
+				"Consider using patterns that don't rely on \\n matching literal newlines.", pattern)
 		}
 
 		newContent := ""
@@ -78,7 +81,10 @@ func ReplaceWithRegex(path, pattern, replacement string, occurrence int, caseSen
 	// For specific occurrences, we need more control
 	allMatches := re.FindAllStringSubmatchIndex(fileContent, -1)
 	if len(allMatches) == 0 {
-		return fileContent, 0, nil
+		return "", 0, fmt.Errorf("Pattern not found in file.\n"+
+			"Pattern: %q\n"+
+			"Note: For multiline patterns, the pattern must match content exactly including whitespace.\n"+
+			"Consider using patterns that don't rely on \\n matching literal newlines.", pattern)
 	}
 
 	if occurrence > len(allMatches) {
@@ -126,7 +132,10 @@ func ReplaceWithRegexInString(content, pattern, replacement string, occurrence i
 		// FindAllStringSubmatchIndex gives us access to capture groups
 		allMatches := re.FindAllStringSubmatchIndex(content, -1)
 		if len(allMatches) == 0 {
-			return content, 0, nil
+			return "", 0, fmt.Errorf("Pattern not found in content.\n"+
+				"Pattern: %q\n"+
+				"Note: For multiline patterns, the pattern must match content exactly including whitespace.\n"+
+				"Consider using patterns that don't rely on \\n matching literal newlines.", pattern)
 		}
 
 		newContent := ""
@@ -157,7 +166,10 @@ func ReplaceWithRegexInString(content, pattern, replacement string, occurrence i
 	// For specific occurrences, we need more control
 	allMatches := re.FindAllStringSubmatchIndex(content, -1)
 	if len(allMatches) == 0 {
-		return content, 0, nil
+		return "", 0, fmt.Errorf("Pattern not found in content.\n"+
+			"Pattern: %q\n"+
+			"Note: For multiline patterns, the pattern must match content exactly including whitespace.\n"+
+			"Consider using patterns that don't rely on \\n matching literal newlines.", pattern)
 	}
 
 	if occurrence > len(allMatches) {
