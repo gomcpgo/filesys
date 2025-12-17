@@ -56,54 +56,34 @@ func InsertBeforeRegex(path, pattern, content string, occurrence int, autoIndent
 
 		// If targeting specific occurrence and this isn't it, skip insertion
 		if occurrence > 0 && i+1 != occurrence {
-			if i+1 < occurrence {
-				continue
-			}
-			// For occurrences after the one we're targeting,
-			// just add the content up to this point and continue
-			newContent += fileContent[lastIndex:matchEnd]
-			lastIndex = matchEnd
 			continue
 		}
-
-		// Find the line containing the match to extract its indentation
-		lineStart := matchStart
-		for lineStart > 0 && fileContent[lineStart-1] != '\n' {
-			lineStart--
-		}
-
-		// Extract the indentation of the current line
-		lineIndent := ""
-		for j := lineStart; j < len(fileContent) && (fileContent[j] == ' ' || fileContent[j] == '\t'); j++ {
-			lineIndent += string(fileContent[j])
-		}
-
-		// Add content up to the line start (not including the line's indentation)
-		newContent += fileContent[lastIndex:lineStart]
 
 		// Prepare the content to insert
 		insertContent := content
 
-		// If autoIndent is enabled, apply indentation from the current line
+		// If autoIndent is enabled, we need to insert on a new line with proper indentation
 		if autoIndent {
-			// Check if the first non-empty line of content already starts with whitespace
-			// Only auto-indent if it doesn't
-			shouldAutoIndent := false
-			if lineIndent != "" {
-				lines := splitLines(content)
-				for _, line := range lines {
-					if len(line) > 0 {
-						// Only auto-indent if the line doesn't start with whitespace
-						if line[0] != ' ' && line[0] != '\t' {
-							shouldAutoIndent = true
-						}
-						break
-					}
-				}
+			// Find the line containing the match to extract its indentation
+			lineStart := matchStart
+			for lineStart > 0 && fileContent[lineStart-1] != '\n' {
+				lineStart--
 			}
 
-			// Apply indentation if needed
-			if shouldAutoIndent {
+			// Extract the indentation of the current line
+			lineIndent := ""
+			for j := lineStart; j < len(fileContent) && (fileContent[j] == ' ' || fileContent[j] == '\t'); j++ {
+				lineIndent += string(fileContent[j])
+			}
+
+			// For autoIndent, we insert content as new line(s) before the current line
+			// First, add everything up to the line start
+			if lastIndex <= lineStart {
+				newContent += fileContent[lastIndex:lineStart]
+			}
+
+			// Apply indentation to each line of the content
+			if lineIndent != "" {
 				lines := splitLines(content)
 				var indentedLines []string
 				for _, line := range lines {
@@ -114,27 +94,34 @@ func InsertBeforeRegex(path, pattern, content string, occurrence int, autoIndent
 					}
 				}
 				insertContent = joinLines(indentedLines)
-				// Preserve trailing newline if it was in the original content
-				if len(content) > 0 && content[len(content)-1] == '\n' {
+				// Ensure trailing newline for proper line separation
+				if len(insertContent) > 0 && insertContent[len(insertContent)-1] != '\n' {
 					insertContent += "\n"
 				}
 			}
+
+			// Add the indented content
+			newContent += insertContent
+
+			// Add the original line (from lineStart to matchEnd, which includes indentation and match)
+			newContent += fileContent[lineStart:matchEnd]
+
+			lastIndex = matchEnd
+		} else {
+			// Without autoIndent, just insert directly before the match
+			newContent += fileContent[lastIndex:matchStart]
+			newContent += insertContent
+			newContent += fileContent[matchStart:matchEnd]
+			lastIndex = matchEnd
 		}
 
-		// Insert the indented content before the match
-		newContent += insertContent
-
-		// Add the original line's indentation (if it had any) plus the match
-		if lineIndent != "" {
-			newContent += lineIndent
+		// If targeting specific occurrence and we've handled it, we're done processing matches
+		if occurrence > 0 && i+1 == occurrence {
+			break
 		}
-		newContent += fileContent[matchStart:matchEnd]
-
-		// Update lastIndex to point to the end of this match
-		lastIndex = matchEnd
 	}
 
-	// Add any remaining content after the last processed match
+	// Add any remaining content after the last match or insertion
 	if lastIndex < len(fileContent) {
 		newContent += fileContent[lastIndex:]
 	}

@@ -266,3 +266,103 @@ func TestInsertBeforeRegex_WithAutoIndent_MultiLine(t *testing.T) {
 		t.Errorf("Expected:\n%s\n\nGot:\n%s", expected, result)
 	}
 }
+
+// TestInsertBeforeAllOccurrences_ManyMatches tests inserting before all occurrences
+// with many matches (reproduces MCP client crash scenario)
+func TestInsertBeforeAllOccurrences_ManyMatches(t *testing.T) {
+	content := `package testing
+
+import (
+	"context"
+	"fmt"
+	"strings"
+)
+
+// Service provides testing functionality
+type Service struct {
+	name string
+	id   int
+}
+
+// NewService creates a new Service instance
+func NewService(name string) *Service {
+	return &Service{
+		name: name,
+		id:   1,
+	}
+}
+
+// Process handles data processing
+func (s *Service) Process(ctx context.Context, data string) (string, error) {
+	if data == "" {
+		return "", fmt.Errorf("empty data")
+	}
+	result := strings.ToUpper(data)
+	return result, nil
+}
+`
+
+	testFile, cleanup := setupTestFileForBefore(t, "service.go", content)
+	defer cleanup()
+
+	// Insert "/* before */ " before all occurrences of "Service"
+	result, err := InsertBeforeRegex(testFile, `Service`, "/* before */ ", 0, false)
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	// Count occurrences of "/* before */ " in result
+	count := 0
+	for i := 0; i < len(result); i++ {
+		if i+14 <= len(result) && result[i:i+14] == "/* before */ S" {
+			count++
+		}
+	}
+
+	// Should have 8 occurrences (matching all "Service" strings including NewService, *Service, &Service)
+	if count != 8 {
+		t.Errorf("Expected 8 insertions, got %d\n\nResult:\n%s", count, result)
+	}
+}
+
+// TestInsertBeforeAllOccurrences_WithDryRunSimulation tests the scenario
+// that caused MCP server crash - occurrence 0 with pattern "Service"
+func TestInsertBeforeAllOccurrences_WithDryRunSimulation(t *testing.T) {
+	content := `package testing
+
+// Service provides testing functionality
+type Service struct {
+	name string
+}
+
+func NewService(name string) *Service {
+	return &Service{
+		name: name,
+	}
+}
+
+func (s *Service) Process() {}
+`
+
+	testFile, cleanup := setupTestFileForBefore(t, "service_dryrun.go", content)
+	defer cleanup()
+
+	// This is the exact call that caused the MCP server to crash
+	result, err := InsertBeforeRegex(testFile, `Service`, "/* before */ ", 0, false)
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	// Verify the result is valid and contains insertions
+	if len(result) == 0 {
+		t.Error("Result should not be empty")
+	}
+
+	// The result should be longer than the original content
+	if len(result) <= len(content) {
+		t.Errorf("Result should be longer than original. Original: %d, Result: %d", len(content), len(result))
+	}
+
+	t.Logf("Result length: %d, Original length: %d", len(result), len(content))
+	t.Logf("Result:\n%s", result)
+}
