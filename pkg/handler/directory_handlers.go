@@ -24,18 +24,32 @@ func (h *FileSystemHandler) handleCreateDirectory(args map[string]interface{}) (
 		return nil, NewAccessDeniedError(path)
 	}
 
+	// Check if directory already exists before creating
+	alreadyExists := false
+	if info, err := os.Stat(path); err == nil && info.IsDir() {
+		alreadyExists = true
+	}
+
 	err := os.MkdirAll(path, 0755)
 	if err != nil {
 		log.Printf("ERROR: create_directory - failed to create directory %s: %v", path, err)
 		return nil, fmt.Errorf("failed to create directory: %w", err)
 	}
 
-	log.Printf("create_directory - successfully created directory: %s", path)
+	var msg string
+	if alreadyExists {
+		msg = fmt.Sprintf("Directory already exists: %s", path)
+		log.Printf("create_directory - directory already existed: %s", path)
+	} else {
+		msg = fmt.Sprintf("Successfully created directory: %s", path)
+		log.Printf("create_directory - successfully created directory: %s", path)
+	}
+
 	return &protocol.CallToolResponse{
 		Content: []protocol.ToolContent{
 			{
 				Type: "text",
-				Text: fmt.Sprintf("Successfully created directory: %s", path),
+				Text: msg,
 			},
 		},
 	}, nil

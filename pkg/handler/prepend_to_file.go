@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 	"github.com/gomcpgo/mcp/pkg/protocol"
 )
@@ -29,6 +30,13 @@ func (h *FileSystemHandler) handlePrependToFile(args map[string]interface{}) (*p
 		return nil, NewAccessDeniedError(path)
 	}
 	
+	// Auto-create parent directories if they don't exist
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		log.Printf("ERROR: prepend_to_file - failed to create parent directories for %s: %v", path, err)
+		return nil, fmt.Errorf("failed to create parent directories: %w", err)
+	}
+
 	// Check if file exists
 	fileInfo, err := os.Stat(path)
 	if err != nil {

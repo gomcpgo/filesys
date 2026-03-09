@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 
 	"github.com/gomcpgo/mcp/pkg/protocol"
 )
@@ -26,18 +27,26 @@ func (h *FileSystemHandler) handleWriteFile(args map[string]interface{}) (*proto
 		return nil, NewAccessDeniedError(path)
 	}
 
+	// Auto-create parent directories if they don't exist
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		log.Printf("ERROR: write_file - failed to create parent directories for %s: %v", path, err)
+		return nil, fmt.Errorf("failed to create parent directories: %w", err)
+	}
+
 	err := os.WriteFile(path, []byte(content), 0644)
 	if err != nil {
 		log.Printf("ERROR: write_file - failed to write to %s: %v", path, err)
 		return nil, fmt.Errorf("failed to write file: %w", err)
 	}
 
-	log.Printf("write_file - successfully wrote %d bytes to %s", len(content), path)
+	bytesWritten := len(content)
+	log.Printf("write_file - successfully wrote %d bytes to %s", bytesWritten, path)
 	return &protocol.CallToolResponse{
 		Content: []protocol.ToolContent{
 			{
 				Type: "text",
-				Text: fmt.Sprintf("Successfully wrote file: %s", path),
+				Text: fmt.Sprintf("Successfully wrote %d bytes to: %s", bytesWritten, path),
 			},
 		},
 	}, nil
