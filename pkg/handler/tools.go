@@ -421,6 +421,40 @@ func (h *FileSystemHandler) ListTools(ctx context.Context) (*protocol.ListToolsR
 		},
 		{
 			// Tool Definition
+			Name:        "copy_lines",
+			Description: "Copy a range of lines from a source file to a destination file. The content is copied directly on disk without passing through the conversation. Use this instead of read_file + write_file when you need to extract or split file sections.",
+			InputSchema: json.RawMessage(`{
+				"type": "object",
+				"properties": {
+					"source_path": {
+						"type": "string",
+						"description": "Source file path"
+					},
+					"destination_path": {
+						"type": "string",
+						"description": "Destination file path"
+					},
+					"start_line": {
+						"type": "integer",
+						"description": "First line to copy (1-indexed, default: 1)",
+						"minimum": 1
+					},
+					"end_line": {
+						"type": "integer",
+						"description": "Last line to copy (inclusive, default: end of file)",
+						"minimum": 1
+					},
+					"append": {
+						"type": "boolean",
+						"description": "Append to destination instead of overwriting (default: false)",
+						"default": false
+					}
+				},
+				"required": ["source_path", "destination_path"]
+			}`),
+		},
+		{
+			// Tool Definition
 			Name:        "replace_in_files",
 			Description: "Replace occurrences of a string across multiple files. Use search_in_files first to identify target files.",
 			InputSchema: json.RawMessage(`{
