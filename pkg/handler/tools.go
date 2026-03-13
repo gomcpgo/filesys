@@ -109,7 +109,7 @@ func (h *FileSystemHandler) ListTools(ctx context.Context) (*protocol.ListToolsR
 		{
 			// Tool Definition
 			Name:        "write_file",
-			Description: "Create a new file or completely overwrite an existing file with new content.",
+			Description: "Create a new file or completely overwrite an existing file with new content. Automatically creates parent directories if they don't exist. Returns the number of bytes written.",
 			InputSchema: json.RawMessage(`{
 				"type": "object",
 				"properties": {
@@ -128,7 +128,7 @@ func (h *FileSystemHandler) ListTools(ctx context.Context) (*protocol.ListToolsR
 		{
 			// Tool Definition
 			Name:        "create_directory",
-			Description: "Create a new directory or ensure a directory exists.",
+			Description: "Create a new directory and all necessary parent directories. Safe to call if the directory already exists (idempotent). Reports whether the directory was newly created or already existed.",
 			InputSchema: json.RawMessage(`{
 				"type": "object",
 				"properties": {
@@ -237,7 +237,7 @@ func (h *FileSystemHandler) ListTools(ctx context.Context) (*protocol.ListToolsR
 		{
 			// Tool Definition
 			Name:        "append_to_file",
-			Description: "Add content to the end of a file. If the file doesn't exist, it will be created.",
+			Description: "Add content to the end of a file. If the file doesn't exist, it will be created. Automatically creates parent directories if they don't exist.",
 			InputSchema: json.RawMessage(`{
 				"type": "object",
 				"properties": {
@@ -256,7 +256,7 @@ func (h *FileSystemHandler) ListTools(ctx context.Context) (*protocol.ListToolsR
 		{
 			// Tool Definition
 			Name:        "prepend_to_file",
-			Description: "Add content to the beginning of a file. If the file doesn't exist, it will be created.",
+			Description: "Add content to the beginning of a file. If the file doesn't exist, it will be created. Automatically creates parent directories if they don't exist.",
 			InputSchema: json.RawMessage(`{
 				"type": "object",
 				"properties": {
@@ -417,6 +417,40 @@ func (h *FileSystemHandler) ListTools(ctx context.Context) (*protocol.ListToolsR
 					}
 				},
 				"required": ["path", "pattern", "content"]
+			}`),
+		},
+		{
+			// Tool Definition
+			Name:        "copy_lines",
+			Description: "Copy a range of lines from a source file to a destination file. The content is copied directly on disk without passing through the conversation. Use this instead of read_file + write_file when you need to extract or split file sections.",
+			InputSchema: json.RawMessage(`{
+				"type": "object",
+				"properties": {
+					"source_path": {
+						"type": "string",
+						"description": "Source file path"
+					},
+					"destination_path": {
+						"type": "string",
+						"description": "Destination file path"
+					},
+					"start_line": {
+						"type": "integer",
+						"description": "First line to copy (1-indexed, default: 1)",
+						"minimum": 1
+					},
+					"end_line": {
+						"type": "integer",
+						"description": "Last line to copy (inclusive, default: end of file)",
+						"minimum": 1
+					},
+					"append": {
+						"type": "boolean",
+						"description": "Append to destination instead of overwriting (default: false)",
+						"default": false
+					}
+				},
+				"required": ["source_path", "destination_path"]
 			}`),
 		},
 		{

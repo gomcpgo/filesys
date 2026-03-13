@@ -9,7 +9,9 @@ import (
 	"github.com/gomcpgo/mcp/pkg/protocol"
 )
 
-const maxFileSize = 5 * 1024 * 1024 // 5MB in bytes
+// Byte caps for read operations to prevent context overflow
+const maxUnboundedReadBytes = 40 * 1024  // 40KB ≈ 10K tokens - no range specified
+const maxRangedReadBytes    = 100 * 1024 // 100KB ≈ 25K tokens - explicit range
 
 func (h *FileSystemHandler) handleReadFile(args map[string]interface{}) (*protocol.CallToolResponse, error) {
 	path, ok := args["path"].(string)
@@ -21,11 +23,11 @@ func (h *FileSystemHandler) handleReadFile(args map[string]interface{}) (*protoc
 	// Extract optional parameters
 	startLine := 0
 	endLine := 0
-	
+
 	if startLineVal, ok := args["start_line"].(float64); ok {
 		startLine = int(startLineVal)
 	}
-	
+
 	if endLineVal, ok := args["end_line"].(float64); ok {
 		endLine = int(endLineVal)
 	}
@@ -37,8 +39,15 @@ func (h *FileSystemHandler) handleReadFile(args map[string]interface{}) (*protoc
 		return nil, NewAccessDeniedError(path)
 	}
 
-	// Use our smart file reading function
-	result, err := fileread.ReadFile(path, startLine, endLine, maxFileSize)
+	// Choose byte cap based on whether a range was specified
+	hasRange := startLine > 0 || endLine > 0
+	readLimit := maxUnboundedReadBytes
+	if hasRange {
+		readLimit = maxRangedReadBytes
+	}
+
+	// Use our smart file reading function with the appropriate byte cap
+	result, err := fileread.ReadFile(path, startLine, endLine, readLimit)
 	if err != nil {
 		log.Printf("ERROR: read_file - failed to read file %s: %v", path, err)
 		return nil, fmt.Errorf("failed to read file: %w", err)
@@ -51,26 +60,27 @@ func (h *FileSystemHandler) handleReadFile(args map[string]interface{}) (*protoc
 			Text: result.Content,
 		},
 	}
-	
+
 	// Only add metadata if it's a partial read or truncated
 	if result.IsPartial || result.Truncated {
 		var metadataBuilder strings.Builder
-		
-		// If the file was truncated, add a warning message
+
+		// If the file was truncated, add a warning message with guidance
 		if result.Truncated {
-			metadataBuilder.WriteString("⚠️ File content was truncated due to size limits.\n")
+			metadataBuilder.WriteString(fmt.Sprintf("Showing first %d lines of %d (%d bytes limit). Use start_line/end_line to read specific ranges.\n",
+				result.ReadLines, result.TotalLines, readLimit))
 		}
-		
+
 		// Add information about file and line range
 		metadataBuilder.WriteString(fmt.Sprintf("File: %s\n", path))
 		metadataBuilder.WriteString(fmt.Sprintf("Total lines: %d\n", result.TotalLines))
-		
+
 		if result.StartLine > 1 || (result.EndLine > 0 && result.EndLine < result.TotalLines) {
 			metadataBuilder.WriteString(fmt.Sprintf("Showing lines %d to %d\n", result.StartLine, result.EndLine))
 		}
-		
+
 		metadataBuilder.WriteString(fmt.Sprintf("Content size: %d bytes\n", result.ContentSize))
-		
+
 		// Add metadata as second content element
 		contentArray = append(contentArray, protocol.ToolContent{
 			Type: "text",
@@ -78,9 +88,9 @@ func (h *FileSystemHandler) handleReadFile(args map[string]interface{}) (*protoc
 		})
 	}
 
-	log.Printf("read_file - successfully read %d bytes (%d lines) from %s", 
+	log.Printf("read_file - successfully read %d bytes (%d lines) from %s",
 		result.ContentSize, result.ReadLines, path)
-		
+
 	return &protocol.CallToolResponse{
 		Content: contentArray,
 	}, nil
@@ -112,9 +122,8 @@ func (h *FileSystemHandler) handleReadMultipleFiles(args map[string]interface{})
 			continue
 		}
 
-		// Use our optimized file reading function 
-		// For multiple files, we always read the entire file (no line ranges)
-		result, err := fileread.ReadFile(path, 0, 0, maxFileSize)
+		// Use our optimized file reading function with byte cap
+		result, err := fileread.ReadFile(path, 0, 0, maxUnboundedReadBytes)
 		if err != nil {
 			log.Printf("ERROR: read_multiple_files - failed to read file %s: %v", path, err)
 			results = append(results, fmt.Sprintf("Error reading %s: %v", path, err))
@@ -123,8 +132,8 @@ func (h *FileSystemHandler) handleReadMultipleFiles(args map[string]interface{})
 
 		// Add metadata if the file was truncated
 		if result.Truncated {
-			results = append(results, fmt.Sprintf("=== %s ===\n⚠️ File content was truncated (showing %d of %d bytes)\n%s", 
-				path, result.ContentSize, result.FileSize, result.Content))
+			results = append(results, fmt.Sprintf("=== %s ===\n%s\nShowing first %d lines of %d (%d bytes limit). Use read_file with start_line/end_line for specific ranges.",
+				path, result.Content, result.ReadLines, result.TotalLines, maxUnboundedReadBytes))
 		} else {
 			results = append(results, fmt.Sprintf("=== %s ===\n%s", path, result.Content))
 		}
