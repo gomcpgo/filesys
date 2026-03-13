@@ -1,0 +1,53 @@
+name: Release Filesystem MCP Server
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+
+      - name: Parse version from tag
+        id: version
+        run: echo "version=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+
+      - name: Run tests
+        run: go test ./...
+
+      - name: Build binaries
+        run: |
+          build() {
+            local os=$1 arch=$2 ext=$3
+            local output="bin/filesystem-mcp-${os}-${arch}${ext}"
+            echo "Building ${os}/${arch}..."
+            GOOS=$os GOARCH=$arch go build -ldflags="-s -w" -o "$output" ./cmd
+          }
+
+          build darwin  arm64
+          build darwin  amd64
+          build linux   amd64
+          build linux   arm64
+          build windows amd64 .exe
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "Filesystem MCP Server ${{ steps.version.outputs.version }}"
+          generate_release_notes: true
+          files: |
+            bin/filesystem-mcp-darwin-arm64
+            bin/filesystem-mcp-darwin-amd64
+            bin/filesystem-mcp-linux-amd64
+            bin/filesystem-mcp-linux-arm64
+            bin/filesystem-mcp-windows-amd64.exe
